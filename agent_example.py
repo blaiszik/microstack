@@ -205,25 +205,6 @@ def analyze_surface(element: str, face: str) -> str:
         return f"Error during analysis: {str(e)}"
 
 
-@tool
-def list_references() -> str:
-    """
-    List all available surface reference data for comparison.
-
-    Returns:
-        A formatted list of elements and surfaces with reference data.
-    """
-    refs = materials_project.list_available_references()
-
-    lines = ["# Available Reference Data\n"]
-    lines.append("The following surfaces have experimental/DFT reference data for comparison:\n")
-
-    for element, faces in sorted(refs.items()):
-        lines.append(f"- **{element}**: {', '.join(faces)}")
-
-    lines.append("\nUse `analyze <element> <face>` for full analysis with comparison.")
-
-    return "\n".join(lines)
 
 # --- Agent Logic ---
 
@@ -267,14 +248,8 @@ def heuristic_agent(state: AgentState):
     last_message = state['messages'][-1]
     content = last_message.content.lower()
 
-    # Check for list references command
-    if "list" in content and ("reference" in content or "available" in content):
-        return {"messages": [AIMessage(content="", tool_calls=[
-            {"name": "list_references", "args": {}, "id": "call_1"}
-        ])]}
-
     # Check for full analysis (highest priority)
-    if "analyze" in content or "analysis" in content or "report" in content or "compare" in content:
+    if "analyze" in content or "analysis" in content or "report" in content:
         element, face = parse_element_face(content)
         return {"messages": [AIMessage(content="", tool_calls=[
             {"name": "analyze_surface", "args": {"element": element, "face": face}, "id": "call_1"}
@@ -297,10 +272,9 @@ def heuristic_agent(state: AgentState):
     # Help message
     return {"messages": [AIMessage(content="""I can help you with surface analysis! Try:
 
-• **analyze Cu 100** - Full analysis with ML relaxation, comparison to experiments, and AI-generated report
+• **analyze Cu 100** - Full analysis with ML relaxation and AI-generated scientific report
 • **relax Pt 111** - Quick relaxation without full analysis
 • **generate graphene** - Just create the structure
-• **list references** - Show available experimental data
 
 Supported elements: Cu, Pt, Au, Ag, Ni, Pd, MoS2
 Supported faces: 100, 111, 110, graphene, 2d""")]}
@@ -310,7 +284,7 @@ workflow = StateGraph(AgentState)
 
 # Add nodes
 workflow.add_node("agent", heuristic_agent)
-tools = [generate_surface, relax_surface, analyze_surface, list_references]
+tools = [generate_surface, relax_surface, analyze_surface]
 tool_node = ToolNode(tools)
 workflow.add_node("tools", tool_node)
 
@@ -377,10 +351,10 @@ def render_markdown(text: str):
 def main():
     print_logo()
     print("\033[1mWelcome to the AI Materials Scientist!\033[0m")
-    print("I can analyze atomic surfaces using ML potentials and compare with experiments.")
+    print("I can analyze atomic surfaces using ML potentials (MACE-MP).")
     print("")
     print("Try: '\033[93manalyze Cu 100\033[0m' for full analysis with AI-generated report")
-    print("     '\033[93mlist references\033[0m' to see available experimental data")
+    print("     '\033[93mrelax Pt 111\033[0m' for quick relaxation")
     print("Type 'quit' or 'exit' to leave.\n")
 
     # Check config

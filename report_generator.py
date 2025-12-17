@@ -36,43 +36,22 @@ def generate_discussion(
     comparison = analysis.get("comparison", {})
     reference = analysis.get("reference", {})
 
-    prompt = f"""You are a materials scientist writing the discussion section of a technical report on surface relaxation.
+    prompt = f"""Write a brief scientific discussion (2 short paragraphs, no headers) for a {element}({face}) surface relaxation study.
 
-## Context
-A machine learning potential (MACE-MP, trained on Materials Project DFT data) was used to predict atomic relaxation of the {element}({face}) surface.
-
-## ML Prediction Results
-- Number of atoms: {relaxation.get('n_atoms', 'N/A')}
-- Number of layers: {relaxation.get('n_layers', 'N/A')}
+Data:
 - Energy change: {analysis.get('energy_change_eV', 0):.4f} eV
-- Maximum atomic displacement: {relaxation.get('max_displacement', 0):.3f} Å
-- Interlayer spacing changes: {json.dumps(relaxation.get('layer_changes_percent', {}), indent=2)}
+- Max displacement: {relaxation.get('max_displacement', 0):.3f} Å
+- Layer changes: {json.dumps(relaxation.get('layer_changes_percent', {}), indent=2)}
 
-## Reference Data
-- Source: {comparison.get('reference_source', 'N/A')}
-- Method: {comparison.get('reference_method', 'N/A')}
-- Reference values: {json.dumps(reference.get('surface', {}), indent=2) if reference.get('surface') else 'No reference available'}
+Paragraph 1: Explain the physics of why this surface relaxes this way (Smoluchowski smoothing, coordination effects, etc.).
+Paragraph 2: Brief implications for catalysis or microscopy.
 
-## Comparison Results
-- Overall agreement: {comparison.get('overall_agreement', 'N/A')}
-- Mean deviation: {comparison.get('mean_deviation', 'N/A')}%
-- Layer-by-layer comparison: {json.dumps(comparison.get('layer_comparisons', []), indent=2)}
-
-## Task
-Write a concise scientific discussion (3-4 paragraphs) that:
-
-1. **Physical interpretation**: Explain WHY this surface relaxes the way it does. Discuss the underlying physics (Smoluchowski smoothing, coordination number effects, electronic redistribution, etc. as appropriate).
-
-2. **Comparison analysis**: Discuss how well the ML prediction agrees with experimental/DFT reference data. What does this tell us about the accuracy of the MACE potential for this system?
-
-3. **Implications**: Briefly discuss the relevance of these surface properties for practical applications (catalysis, microscopy, thin films, etc.).
-
-Write in a professional scientific tone. Be specific about the numbers. Keep it concise but insightful."""
+Be specific with numbers. No headers or bullet points. Professional tone."""
 
     try:
         response = client.messages.create(
             model=config.CLAUDE_MODEL,
-            max_tokens=1024,
+            max_tokens=512,
             messages=[{"role": "user", "content": prompt}]
         )
         return response.content[0].text
