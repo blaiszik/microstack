@@ -7,7 +7,7 @@ import numpy as np
 from ase import Atoms
 from typing import Optional
 
-from atomic_materials import materials_project
+from atomic_materials.relaxation import materials_project
 
 
 def analyze_relaxation(unrelaxed: Atoms, relaxed: Atoms) -> dict:
@@ -69,19 +69,16 @@ def analyze_relaxation(unrelaxed: Atoms, relaxed: Atoms) -> dict:
         "n_atoms": len(unrelaxed),
         "n_layers": len(layer_z_before),
         "layer_atom_counts": layer_atom_counts,
-
         # Interlayer spacings
         "interlayer_spacings_before": spacings_before.tolist(),
         "interlayer_spacings_after": spacings_after.tolist(),
         "layer_changes_percent": layer_changes,
-
         # Atomic displacements
         "z_displacements": z_displacements.tolist(),
         "displacement_magnitudes": displacement_magnitudes.tolist(),
         "max_displacement": float(np.max(displacement_magnitudes)),
         "mean_displacement": float(np.mean(displacement_magnitudes)),
         "max_z_displacement": float(np.max(np.abs(z_displacements))),
-
         # Layer positions
         "layer_z_before": layer_z_before.tolist(),
         "layer_z_after": layer_z_after.tolist(),
@@ -89,10 +86,7 @@ def analyze_relaxation(unrelaxed: Atoms, relaxed: Atoms) -> dict:
 
 
 def compare_with_reference(
-    ml_analysis: dict,
-    reference: Optional[dict],
-    element: str,
-    face: str
+    ml_analysis: dict, reference: Optional[dict], element: str, face: str
 ) -> dict:
     """
     Compare ML prediction with reference data.
@@ -136,13 +130,19 @@ def compare_with_reference(
             deviation = abs(ml_value - ref_value)
             deviations.append(deviation)
 
-            comparison["layer_comparisons"].append({
-                "layer": key.replace("_change", ""),
-                "ml_prediction": round(ml_value, 2),
-                "reference": ref_value,
-                "deviation": round(deviation, 2),
-                "agreement": "good" if deviation < 1.0 else ("moderate" if deviation < 2.0 else "poor")
-            })
+            comparison["layer_comparisons"].append(
+                {
+                    "layer": key.replace("_change", ""),
+                    "ml_prediction": round(ml_value, 2),
+                    "reference": ref_value,
+                    "deviation": round(deviation, 2),
+                    "agreement": (
+                        "good"
+                        if deviation < 1.0
+                        else ("moderate" if deviation < 2.0 else "poor")
+                    ),
+                }
+            )
 
     # Calculate overall agreement score
     if deviations:
@@ -151,16 +151,24 @@ def compare_with_reference(
 
         if mean_deviation < 1.0:
             comparison["overall_agreement"] = "excellent"
-            comparison["agreement_description"] = f"Mean deviation {mean_deviation:.1f}% - within experimental uncertainty"
+            comparison["agreement_description"] = (
+                f"Mean deviation {mean_deviation:.1f}% - within experimental uncertainty"
+            )
         elif mean_deviation < 2.0:
             comparison["overall_agreement"] = "good"
-            comparison["agreement_description"] = f"Mean deviation {mean_deviation:.1f}% - reasonable agreement"
+            comparison["agreement_description"] = (
+                f"Mean deviation {mean_deviation:.1f}% - reasonable agreement"
+            )
         elif mean_deviation < 3.0:
             comparison["overall_agreement"] = "moderate"
-            comparison["agreement_description"] = f"Mean deviation {mean_deviation:.1f}% - qualitative agreement"
+            comparison["agreement_description"] = (
+                f"Mean deviation {mean_deviation:.1f}% - qualitative agreement"
+            )
         else:
             comparison["overall_agreement"] = "poor"
-            comparison["agreement_description"] = f"Mean deviation {mean_deviation:.1f}% - significant discrepancy"
+            comparison["agreement_description"] = (
+                f"Mean deviation {mean_deviation:.1f}% - significant discrepancy"
+            )
 
     return comparison
 
@@ -171,7 +179,7 @@ def full_analysis(
     element: str,
     face: str,
     initial_energy: float,
-    final_energy: float
+    final_energy: float,
 ) -> dict:
     """
     Perform complete analysis including relaxation metrics and reference comparison.
@@ -195,28 +203,21 @@ def full_analysis(
 
     # Compare with reference
     comparison = compare_with_reference(
-        relaxation,
-        reference_data.get("surface"),
-        element,
-        face
+        relaxation, reference_data.get("surface"), element, face
     )
 
     return {
         "element": element,
         "face": face,
         "surface_label": f"{element}({face})",
-
         # Energy
         "initial_energy_eV": initial_energy,
         "final_energy_eV": final_energy,
         "energy_change_eV": final_energy - initial_energy,
-
         # Relaxation metrics
         "relaxation": relaxation,
-
         # Reference data
         "reference": reference_data,
-
         # Comparison
         "comparison": comparison,
     }

@@ -5,7 +5,7 @@ Provides bulk properties from MP API for surface analysis.
 
 from typing import Optional
 
-from atomic_materials import config
+from atomic_materials.utils import config
 
 # =============================================================================
 # Materials Project IDs for common elements
@@ -85,6 +85,7 @@ BULK_PROPERTIES_CACHE = {
 # API Functions
 # =============================================================================
 
+
 def get_bulk_properties(element: str) -> dict:
     """
     Query Materials Project for bulk properties.
@@ -105,8 +106,13 @@ def get_bulk_properties(element: str) -> dict:
                 # Query MP for the material
                 docs = mpr.materials.summary.search(
                     material_ids=[mp_id],
-                    fields=["structure", "formation_energy_per_atom", "band_gap",
-                            "density", "symmetry"]
+                    fields=[
+                        "structure",
+                        "formation_energy_per_atom",
+                        "band_gap",
+                        "density",
+                        "symmetry",
+                    ],
                 )
                 if docs:
                     doc = docs[0]
@@ -114,16 +120,22 @@ def get_bulk_properties(element: str) -> dict:
                     # Convert enum to string for JSON serialization
                     crystal_system = "cubic"
                     if doc.symmetry and doc.symmetry.crystal_system:
-                        crystal_system = str(doc.symmetry.crystal_system.value) if hasattr(doc.symmetry.crystal_system, 'value') else str(doc.symmetry.crystal_system)
+                        crystal_system = (
+                            str(doc.symmetry.crystal_system.value)
+                            if hasattr(doc.symmetry.crystal_system, "value")
+                            else str(doc.symmetry.crystal_system)
+                        )
                     return {
                         "lattice_constant": float(structure.lattice.a),
                         "formation_energy": float(doc.formation_energy_per_atom or 0.0),
                         "band_gap": float(doc.band_gap or 0.0),
                         "crystal_system": crystal_system,
-                        "space_group": str(doc.symmetry.symbol) if doc.symmetry else "unknown",
+                        "space_group": (
+                            str(doc.symmetry.symbol) if doc.symmetry else "unknown"
+                        ),
                         "density": float(doc.density or 0.0),
                         "source": "Materials Project",
-                        "mp_id": mp_id
+                        "mp_id": mp_id,
                     }
         except Exception as e:
             print(f"Warning: MP API query failed: {e}")
@@ -139,7 +151,7 @@ def get_bulk_properties(element: str) -> dict:
         "lattice_constant": None,
         "formation_energy": None,
         "band_gap": None,
-        "source": "No data available"
+        "source": "No data available",
     }
 
 
@@ -179,7 +191,7 @@ def get_all_reference_data(element: str, face: str) -> dict:
         "surface": surface,
         "element": element,
         "face": face,
-        "has_surface_reference": surface is not None
+        "has_surface_reference": surface is not None,
     }
 
 

@@ -17,7 +17,7 @@ from rich.table import Table
 from rich.prompt import Prompt
 from rich.markdown import Markdown
 
-from atomic_materials import config
+from atomic_materials.utils import config
 from atomic_materials.utils.logging import get_logger
 
 console = Console()
@@ -160,8 +160,12 @@ def show_parameters(params: Dict[str, Any], microscopy_info: Optional[Dict] = No
 
 def run_relaxation_workflow(element: str, face: str, relax: bool) -> Dict[str, Any]:
     """Run surface generation and optional relaxation."""
-    from atomic_materials.generate_surfaces import create_surface
-    from atomic_materials.surface_relaxation import load_model, relax_surfaces, plot_surface_relaxation
+    from atomic_materials.relaxation.generate_surfaces import create_surface
+    from atomic_materials.relaxation.surface_relaxation import (
+        load_model,
+        relax_surfaces,
+        plot_surface_relaxation,
+    )
     from ase.io import write
 
     # Initialize output directory
@@ -232,10 +236,14 @@ def run_relaxation_workflow(element: str, face: str, relax: bool) -> Dict[str, A
 
 def run_analysis_workflow(element: str, face: str) -> Dict[str, Any]:
     """Run full analysis workflow with report generation."""
-    from atomic_materials.generate_surfaces import create_surface
-    from atomic_materials.surface_relaxation import load_model, relax_surfaces, plot_surface_relaxation
-    from atomic_materials.comparison import full_analysis
-    from atomic_materials.report_generator import generate_full_report
+    from atomic_materials.relaxation.generate_surfaces import create_surface
+    from atomic_materials.relaxation.surface_relaxation import (
+        load_model,
+        relax_surfaces,
+        plot_surface_relaxation,
+    )
+    from atomic_materials.relaxation.comparison import full_analysis
+    from atomic_materials.relaxation.relax_report_generator import generate_full_report
     from ase.io import write
 
     # Initialize output directory
@@ -330,7 +338,10 @@ def run_analysis_workflow(element: str, face: str) -> Dict[str, Any]:
 
 def run_interactive():
     """Run the interactive chat interface."""
-    from atomic_materials.utils.gpu_detection import get_torch_device, get_gpu_memory_info
+    from atomic_materials.utils.gpu_detection import (
+        get_torch_device,
+        get_gpu_memory_info,
+    )
 
     print_logo()
 
@@ -358,7 +369,9 @@ def run_interactive():
 
     if "cuda" in str(device):
         gpu_mem = get_gpu_memory_info("cuda")
-        console.print(f"[cyan]GPU Memory:[/cyan] {gpu_mem['total_gb']:.1f} GB (Free: {gpu_mem['free_gb']:.1f} GB)")
+        console.print(
+            f"[cyan]GPU Memory:[/cyan] {gpu_mem['total_gb']:.1f} GB (Free: {gpu_mem['free_gb']:.1f} GB)"
+        )
     else:
         console.print(f"[cyan]GPU Memory:[/cyan] CPU mode")
 

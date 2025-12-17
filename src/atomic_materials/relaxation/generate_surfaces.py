@@ -5,7 +5,7 @@ import os
 import uuid
 from pathlib import Path
 
-from atomic_materials import config
+from atomic_materials.utils import config
 
 
 def create_surface(

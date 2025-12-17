@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from typing import Optional
 
-from atomic_materials import config
+from atomic_materials.utils import config
 
 
 def generate_discussion(

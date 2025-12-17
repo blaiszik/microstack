@@ -8,7 +8,7 @@ from typing import Optional
 from rich.console import Console
 from rich.logging import RichHandler
 
-from atomic_materials import config
+from atomic_materials.utils import config
 
 
 def setup_logging(

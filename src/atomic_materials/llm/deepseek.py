@@ -8,7 +8,7 @@ from langchain_deepseek import ChatDeepSeek
 from pydantic import BaseModel, Field
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from atomic_materials.settings import settings
+from atomic_materials.utils.settings import settings
 from atomic_materials.llm.prompts import QUERY_PARSER_SYSTEM_PROMPT
 from atomic_materials.utils.exceptions import LLMConnectionError, QueryParsingError
 from atomic_materials.utils.logging import get_logger

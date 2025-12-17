@@ -15,7 +15,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from atomic_materials import config
+from atomic_materials.utils import config
 from atomic_materials.utils.logging import get_logger
 
 console = Console()
@@ -67,8 +67,12 @@ def relax(element: str, face: str, relax: bool, steps: int, output_dir: str) -> 
         atomic relax Pt 111 --no-relax
         atomic relax C graphene --steps 300
     """
-    from atomic_materials.generate_surfaces import create_surface
-    from atomic_materials.surface_relaxation import load_model, relax_surfaces, plot_surface_relaxation
+    from atomic_materials.relaxation.generate_surfaces import create_surface
+    from atomic_materials.relaxation.surface_relaxation import (
+        load_model,
+        relax_surfaces,
+        plot_surface_relaxation,
+    )
     from ase.io import write
 
     console.print(f"\n[bold cyan]Surface Relaxation Workflow[/bold cyan]\n")
@@ -110,6 +114,7 @@ def relax(element: str, face: str, relax: bool, steps: int, output_dir: str) -> 
             unrelaxed_file = custom_output / f"{element}_{face}_unrelaxed.xyz"
             if unrelaxed_file_src.exists():
                 import shutil
+
                 shutil.copy(str(unrelaxed_file_src), str(unrelaxed_file))
             output_path = custom_output
         else:

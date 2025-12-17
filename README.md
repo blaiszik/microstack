@@ -38,12 +38,14 @@ A CLI agent for analyzing atomic surfaces using Machine Learning Potentials, wit
 3. **Configure API keys** (required for AI report generation):
 
    Create a `.env` file in the project root:
+
    ```bash
    ANTHROPIC_API_KEY="sk-ant-..."  # For Claude AI discussion generation
    MP_API_KEY="..."                 # For Materials Project queries (optional)
    ```
 
    Or set environment variables:
+
    ```bash
    export ANTHROPIC_API_KEY="sk-ant-..."
    export MP_API_KEY="..."
@@ -70,12 +72,12 @@ atomic interactive
 
 ### Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `atomic relax Cu 100` | Generate and relax Cu(100) surface |
-| `atomic relax Pt 111 --no-relax` | Just generate structure without relaxation |
-| `atomic check-config` | Validate configuration and API connectivity |
-| `atomic --help` | Show all available commands |
+| Command                          | Description                                 |
+| -------------------------------- | ------------------------------------------- |
+| `atomic relax Cu 100`            | Generate and relax Cu(100) surface          |
+| `atomic relax Pt 111 --no-relax` | Just generate structure without relaxation  |
+| `atomic check-config`            | Validate configuration and API connectivity |
+| `atomic --help`                  | Show all available commands                 |
 
 ### Interactive Commands
 
@@ -228,12 +230,12 @@ The reduced coordination causes:
 
 All output files are saved to the `src/atomic_materials/output/` directory with task-specific subdirectories.
 
-| File                              | Contents                                  |
-| --------------------------------- | ----------------------------------------- |
-| `{element}_{face}_unrelaxed.xyz`  | Initial atomic structure (XYZ format)     |
+| File                              | Contents                                         |
+| --------------------------------- | ------------------------------------------------ |
+| `{element}_{face}_unrelaxed.xyz`  | Initial atomic structure (XYZ format)            |
 | `{element}_{face}_relaxed.xyz`    | Relaxed atomic structure (if relaxation enabled) |
-| `{element}_{face}_relaxation.png` | Visualization of relaxation metrics       |
-| `{element}_{face}_report.md`      | Full scientific report with AI discussion |
+| `{element}_{face}_relaxation.png` | Visualization of relaxation metrics              |
+| `{element}_{face}_report.md`      | Full scientific report with AI discussion        |
 
 ## Project Structure
 
