@@ -4,7 +4,8 @@ Provides bulk properties from MP API for surface analysis.
 """
 
 from typing import Optional
-import config
+
+from atomic_materials import config
 
 # =============================================================================
 # Materials Project IDs for common elements

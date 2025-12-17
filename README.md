@@ -1,4 +1,4 @@
-# ATOMICS - AI Materials Scientist
+# ATOMIC - AI Materials Scientist
 
 A CLI agent for analyzing atomic surfaces using Machine Learning Potentials, with experimental validation and AI-generated scientific reports.
 
@@ -12,38 +12,81 @@ A CLI agent for analyzing atomic surfaces using Machine Learning Potentials, wit
 
 ## Installation
 
+### Prerequisites
+
+- Python 3.12 or higher
+- pip (Python package manager)
+- CUDA/GPU support (recommended for faster relaxation)
+
+### Setup Steps
+
 1. **Clone the repository**:
+
    ```bash
    git clone <repository-url>
    cd mic-hack
    ```
 
-2. **Install dependencies**:
+2. **Install the package**:
+
    ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
-3. **Configure API keys** (in `config.py` or environment variables):
+   This installs all dependencies defined in `pyproject.toml` and registers the `atomic` CLI command.
+
+3. **Configure API keys** (required for AI report generation):
+
+   Create a `.env` file in the project root:
    ```bash
-   export ANTHROPIC_API_KEY="sk-ant-..."  # For AI discussion generation
-   export MP_API_KEY="..."                 # For Materials Project queries (optional)
+   ANTHROPIC_API_KEY="sk-ant-..."  # For Claude AI discussion generation
+   MP_API_KEY="..."                 # For Materials Project queries (optional)
+   ```
+
+   Or set environment variables:
+   ```bash
+   export ANTHROPIC_API_KEY="sk-ant-..."
+   export MP_API_KEY="..."
+   ```
+
+4. **Verify installation**:
+
+   ```bash
+   atomic --help
+   atomic check-config
    ```
 
 ## Usage
 
+### Starting ATOMIC
+
 ```bash
-python agent_example.py
+# Interactive mode (recommended)
+atomic
+
+# Or explicitly start interactive mode
+atomic interactive
 ```
 
-### Commands
+### Available Commands
 
 | Command | Description |
 |---------|-------------|
-| `analyze Cu 100` | Full analysis pipeline with AI report |
-| `analyze Pt 111` | Analyze platinum (111) surface |
-| `list references` | Show available experimental data |
-| `relax Ni 100` | Quick relaxation without report |
-| `generate graphene` | Just create the structure |
+| `atomic relax Cu 100` | Generate and relax Cu(100) surface |
+| `atomic relax Pt 111 --no-relax` | Just generate structure without relaxation |
+| `atomic check-config` | Validate configuration and API connectivity |
+| `atomic --help` | Show all available commands |
+
+### Interactive Commands
+
+In interactive mode, you can use natural language or direct commands:
+
+```
+You> analyze Cu 100
+You> relax Pt 111
+You> generate graphene
+You> quit
+```
 
 ### Example Session
 
@@ -130,15 +173,17 @@ Step 6: AI REPORT GENERATION
 
 ### What Each Module Does
 
-| Module | Purpose |
-|--------|---------|
-| `generate_surfaces.py` | Creates atomic structures using ASE's surface builders |
-| `surface_relaxation.py` | Loads MACE model and runs FIRE optimization via TorchSim |
-| `materials_project.py` | Queries MP API + stores curated LEED reference data |
-| `comparison.py` | Extracts relaxation metrics and computes agreement scores |
-| `report_generator.py` | Assembles markdown report and calls Claude for discussion |
-| `agent_example.py` | LangGraph agent with CLI interface |
-| `config.py` | API keys and settings |
+| Module                  | Purpose                                                   |
+| ----------------------- | --------------------------------------------------------- |
+| `generate_surfaces.py`  | Creates atomic structures using ASE's surface builders    |
+| `surface_relaxation.py` | Loads MACE model and runs FIRE optimization via TorchSim  |
+| `materials_project.py`  | Queries MP API + stores curated LEED reference data       |
+| `comparison.py`         | Extracts relaxation metrics and computes agreement scores |
+| `report_generator.py`   | Assembles markdown report and calls Claude for discussion |
+| `cli/app.py`            | Click CLI application with available commands             |
+| `cli/interactive.py`    | Interactive chat mode for conversational usage            |
+| `config.py`             | API keys and environment variable configuration           |
+| `settings.py`           | Pydantic-based settings management                        |
 
 ### The Science Behind Surface Relaxation
 
@@ -152,6 +197,7 @@ Surface atom:  8-9 nearest neighbors (missing atoms above)
 ```
 
 The reduced coordination causes:
+
 1. **Smoluchowski smoothing**: Electron density redistributes, pulling surface atoms inward
 2. **d₁₂ contraction**: Top layer moves toward second layer (typically -1% to -3%)
 3. **d₂₃ expansion**: Second layer compensates with slight outward movement
@@ -159,46 +205,74 @@ The reduced coordination causes:
 
 **Reference Data Sources**
 
-| Method | What it measures |
-|--------|------------------|
+| Method                                 | What it measures                         |
+| -------------------------------------- | ---------------------------------------- |
 | LEED (Low-Energy Electron Diffraction) | Atomic positions via electron scattering |
-| DFT (Density Functional Theory) | Quantum mechanical energy minimization |
-| MACE (This project) | ML potential trained on DFT data |
+| DFT (Density Functional Theory)        | Quantum mechanical energy minimization   |
+| MACE (This project)                    | ML potential trained on DFT data         |
 
 ## Available Reference Data
 
-| Element | Surfaces | Reference |
-|---------|----------|-----------|
-| Cu | 100, 111, 110 | Lindgren (1984), Davis (1983), Adams (1987) |
-| Pt | 100, 111 | Heilmann (1979), Materer (1995) |
-| Au | 100, 111 | Gibbs (1991), Harten (1985) |
-| Ag | 100, 111 | Quinn (1988), Soares (1999) |
-| Ni | 100, 111 | Demuth (1975), Narasimhan (1992) |
-| Pd | 100, 111 | Behm (1983), Ohtani (1987) |
-| C | graphene | Castro Neto (2009) |
-| MoS2 | 2d | Splendiani (2010) |
+| Element | Surfaces      | Reference                                   |
+| ------- | ------------- | ------------------------------------------- |
+| Cu      | 100, 111, 110 | Lindgren (1984), Davis (1983), Adams (1987) |
+| Pt      | 100, 111      | Heilmann (1979), Materer (1995)             |
+| Au      | 100, 111      | Gibbs (1991), Harten (1985)                 |
+| Ag      | 100, 111      | Quinn (1988), Soares (1999)                 |
+| Ni      | 100, 111      | Demuth (1975), Narasimhan (1992)            |
+| Pd      | 100, 111      | Behm (1983), Ohtani (1987)                  |
+| C       | graphene      | Castro Neto (2009)                          |
+| MoS2    | 2d            | Splendiani (2010)                           |
 
 ## Output Files
 
-| File | Contents |
-|------|----------|
-| `{element}_{face}_unrelaxed.xyz` | Initial atomic structure (XYZ format) |
-| `{element}_{face}_relaxed.xyz` | Relaxed atomic structure |
-| `{element}_{face}_relaxation.png` | Visualization of relaxation |
-| `{element}_{face}_report.md` | Full scientific report with AI discussion |
+All output files are saved to the `src/atomic_materials/output/` directory with task-specific subdirectories.
+
+| File                              | Contents                                  |
+| --------------------------------- | ----------------------------------------- |
+| `{element}_{face}_unrelaxed.xyz`  | Initial atomic structure (XYZ format)     |
+| `{element}_{face}_relaxed.xyz`    | Relaxed atomic structure (if relaxation enabled) |
+| `{element}_{face}_relaxation.png` | Visualization of relaxation metrics       |
+| `{element}_{face}_report.md`      | Full scientific report with AI discussion |
 
 ## Project Structure
 
 ```
 mic-hack/
-├── agent_example.py      # Main CLI agent
-├── generate_surfaces.py  # Surface generation (ASE)
-├── surface_relaxation.py # ML relaxation (MACE + TorchSim)
-├── materials_project.py  # Reference data + MP API
-├── comparison.py         # Analysis engine
-├── report_generator.py   # Report + Claude integration
-├── config.py             # API keys and settings
-└── requirements.txt      # Dependencies
+├── pyproject.toml                    # Project configuration and dependencies
+├── .env.example                      # Environment variables template
+├── README.md                         # This file
+├── LICENSE                           # MIT License
+├── .gitignore                        # Git exclusions
+│
+└── src/atomic_materials/             # Main package
+    ├── __init__.py                   # Package marker
+    ├── config.py                     # API keys and settings
+    ├── settings.py                   # Pydantic settings management
+    ├── generate_surfaces.py          # Surface generation (ASE)
+    ├── surface_relaxation.py         # ML relaxation (MACE + FIRE)
+    ├── materials_project.py          # Reference data + MP API
+    ├── comparison.py                 # Analysis engine
+    ├── report_generator.py           # Report + Claude integration
+    │
+    ├── cli/                          # CLI subpackage
+    │   ├── __init__.py
+    │   ├── app.py                    # Click CLI entry point
+    │   └── interactive.py            # Interactive chat mode
+    │
+    ├── llm/                          # LLM integration subpackage
+    │   ├── __init__.py
+    │   ├── deepseek.py              # DeepSeek API client
+    │   └── prompts.py               # LLM prompt templates
+    │
+    ├── utils/                        # Utilities subpackage
+    │   ├── __init__.py
+    │   ├── exceptions.py            # Custom exception classes
+    │   ├── gpu_detection.py         # CUDA/GPU utilities
+    │   └── logging.py               # Rich-based logging setup
+    │
+    └── output/                       # Runtime output directory (generated)
+        └── {task_id}/relaxation/    # Task-specific outputs
 ```
 
 ## License

@@ -7,7 +7,8 @@ including Claude-generated scientific interpretation.
 import json
 from datetime import datetime
 from typing import Optional
-import config
+
+from atomic_materials import config
 
 
 def generate_discussion(
@@ -52,7 +53,7 @@ Be specific with numbers. No headers or bullet points. Professional tone."""
         response = client.messages.create(
             model=config.CLAUDE_MODEL,
             max_tokens=512,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
         )
         return response.content[0].text
     except Exception as e:
@@ -71,7 +72,9 @@ def _generate_fallback_discussion(element: str, face: str, analysis: dict) -> st
     # Determine relaxation type
     if d12 < -1:
         relax_type = "inward contraction"
-        physics = "reduced coordination of surface atoms leading to Smoluchowski smoothing"
+        physics = (
+            "reduced coordination of surface atoms leading to Smoluchowski smoothing"
+        )
     elif d12 > 1:
         relax_type = "outward expansion"
         physics = "charge redistribution effects at the surface"
@@ -104,10 +107,7 @@ epitaxial growth, and surface microscopy of {element}-based materials."""
 
 
 def generate_full_report(
-    element: str,
-    face: str,
-    analysis: dict,
-    figure_paths: Optional[list[str]] = None
+    element: str, face: str, analysis: dict, figure_paths: Optional[list[str]] = None
 ) -> str:
     """
     Generate complete markdown report.
@@ -141,14 +141,23 @@ def generate_full_report(
 
     # Summary box
     agreement = comparison.get("overall_agreement", "N/A")
-    agreement_emoji = {"excellent": "✅", "good": "✓", "moderate": "⚠️", "poor": "❌"}.get(agreement, "•")
+    agreement_emoji = {
+        "excellent": "✅",
+        "good": "✓",
+        "moderate": "⚠️",
+        "poor": "❌",
+    }.get(agreement, "•")
 
     report.append("## Summary")
     report.append("")
-    report.append(f"MACE-MP machine learning potential was used to predict the atomic relaxation of {element}({face}). ")
+    report.append(
+        f"MACE-MP machine learning potential was used to predict the atomic relaxation of {element}({face}). "
+    )
 
     if comparison.get("has_reference"):
-        report.append(f"Results show **{agreement}** agreement with experimental/DFT reference data ")
+        report.append(
+            f"Results show **{agreement}** agreement with experimental/DFT reference data "
+        )
         report.append(f"(mean deviation: {comparison.get('mean_deviation', 'N/A')}%).")
     else:
         report.append("No reference data available for quantitative comparison.")
@@ -161,7 +170,9 @@ def generate_full_report(
     report.append("|-----------|-------|")
     report.append("| ML Potential | MACE-MP-0 medium |")
     report.append("| Training Data | Materials Project DFT |")
-    report.append(f"| Surface Model | {relaxation.get('n_atoms', 'N/A')} atoms, {relaxation.get('n_layers', 'N/A')} layers |")
+    report.append(
+        f"| Surface Model | {relaxation.get('n_atoms', 'N/A')} atoms, {relaxation.get('n_layers', 'N/A')} layers |"
+    )
     report.append("| Vacuum | 10 Å |")
     report.append("| Optimizer | FIRE |")
     report.append("")
@@ -193,7 +204,9 @@ def generate_full_report(
     report.append("")
     report.append("| State | Energy (eV) |")
     report.append("|-------|-------------|")
-    report.append(f"| Initial (unrelaxed) | {analysis.get('initial_energy_eV', 0):.4f} |")
+    report.append(
+        f"| Initial (unrelaxed) | {analysis.get('initial_energy_eV', 0):.4f} |"
+    )
     report.append(f"| Final (relaxed) | {analysis.get('final_energy_eV', 0):.4f} |")
     report.append(f"| **Change** | **{analysis.get('energy_change_eV', 0):.4f}** |")
     report.append("")
@@ -209,9 +222,13 @@ def generate_full_report(
         report.append("|---------------|-----------------|-----------|-----------|")
 
         for lc in comparison["layer_comparisons"]:
-            layer = lc["layer"].replace("d", "d₁₂" if "12" in lc["layer"] else lc["layer"])
+            layer = lc["layer"].replace(
+                "d", "d₁₂" if "12" in lc["layer"] else lc["layer"]
+            )
             layer = layer.replace("12", "₁₂").replace("23", "₂₃").replace("34", "₃₄")
-            report.append(f"| {layer} | {lc['ml_prediction']:+.1f}% | {lc['reference']:+.1f}% | {lc['deviation']:.1f}% |")
+            report.append(
+                f"| {layer} | {lc['ml_prediction']:+.1f}% | {lc['reference']:+.1f}% | {lc['deviation']:.1f}% |"
+            )
 
         report.append("")
         report.append(f"**Overall Agreement**: {agreement_emoji} {agreement.upper()}")
@@ -220,7 +237,9 @@ def generate_full_report(
         report.append("| Layer Spacing | Change (%) |")
         report.append("|---------------|------------|")
         for key, value in layer_changes.items():
-            layer = key.replace("_change", "").replace("d", "d₁₂" if "12" in key else key)
+            layer = key.replace("_change", "").replace(
+                "d", "d₁₂" if "12" in key else key
+            )
             layer = layer.replace("12", "₁₂").replace("23", "₂₃").replace("34", "₃₄")
             report.append(f"| {layer} | {value:+.2f} |")
 
@@ -229,9 +248,15 @@ def generate_full_report(
     # Atomic Displacements
     report.append("### Atomic Displacements")
     report.append("")
-    report.append(f"- Maximum displacement: **{relaxation.get('max_displacement', 0):.3f} Å**")
-    report.append(f"- Mean displacement: {relaxation.get('mean_displacement', 0):.3f} Å")
-    report.append(f"- Maximum z-displacement: {relaxation.get('max_z_displacement', 0):.3f} Å")
+    report.append(
+        f"- Maximum displacement: **{relaxation.get('max_displacement', 0):.3f} Å**"
+    )
+    report.append(
+        f"- Mean displacement: {relaxation.get('mean_displacement', 0):.3f} Å"
+    )
+    report.append(
+        f"- Maximum z-displacement: {relaxation.get('max_z_displacement', 0):.3f} Å"
+    )
     report.append("")
 
     # Figures
@@ -254,18 +279,22 @@ def generate_full_report(
 
     ref_num = 1
     if bulk.get("mp_id"):
-        report.append(f"{ref_num}. Materials Project: [{bulk['mp_id']}](https://materialsproject.org/materials/{bulk['mp_id']})")
+        report.append(
+            f"{ref_num}. Materials Project: [{bulk['mp_id']}](https://materialsproject.org/materials/{bulk['mp_id']})"
+        )
         ref_num += 1
 
     if surface_ref and surface_ref.get("source"):
         report.append(f"{ref_num}. {surface_ref['source']}")
         ref_num += 1
 
-    report.append(f"{ref_num}. Batatia et al., \"MACE: Higher Order Equivariant Message Passing Neural Networks\" (2022)")
+    report.append(
+        f'{ref_num}. Batatia et al., "MACE: Higher Order Equivariant Message Passing Neural Networks" (2022)'
+    )
 
     report.append("")
     report.append("---")
-    report.append("*Generated by ATOMICS Surface Agent*")
+    report.append("*Generated by ATOMIC AI Materials Scientist*")
 
     return "\n".join(report)
 

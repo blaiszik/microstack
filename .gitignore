@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Logs and cache files
+*.log
+*.atomic_cache
+*.claude
+
+# Output files
+output

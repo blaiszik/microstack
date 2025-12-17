@@ -6,7 +6,8 @@ Extracts relaxation metrics from structures and compares with reference data.
 import numpy as np
 from ase import Atoms
 from typing import Optional
-import materials_project
+
+from atomic_materials import materials_project
 
 
 def analyze_relaxation(unrelaxed: Atoms, relaxed: Atoms) -> dict:
@@ -221,34 +222,6 @@ def full_analysis(
     }
 
 
-def format_analysis_summary(analysis: dict) -> str:
-    """
-    Format analysis results as a brief text summary.
-
-    Args:
-        analysis: Output from full_analysis()
-
-    Returns:
-        Formatted string summary
-    """
-    lines = []
-    lines.append(f"Surface: {analysis['surface_label']}")
-    lines.append(f"Atoms: {analysis['relaxation']['n_atoms']}, Layers: {analysis['relaxation']['n_layers']}")
-    lines.append(f"Energy change: {analysis['energy_change_eV']:.4f} eV")
-
-    if analysis['comparison']['has_reference']:
-        lines.append(f"\nComparison with {analysis['comparison']['reference_method']}:")
-        for lc in analysis['comparison']['layer_comparisons']:
-            lines.append(f"  {lc['layer']}: ML={lc['ml_prediction']:+.1f}%, Ref={lc['reference']:+.1f}% (Δ={lc['deviation']:.1f}%)")
-
-        lines.append(f"\nOverall agreement: {analysis['comparison']['overall_agreement'].upper()}")
-        lines.append(f"  {analysis['comparison']['agreement_description']}")
-    else:
-        lines.append("\nNo reference data available for comparison")
-
-    return "\n".join(lines)
-
-
 if __name__ == "__main__":
     # Test with dummy data
     print("Comparison module loaded successfully")
@@ -256,4 +229,3 @@ if __name__ == "__main__":
     print("  - analyze_relaxation(unrelaxed, relaxed)")
     print("  - compare_with_reference(ml_analysis, reference, element, face)")
     print("  - full_analysis(unrelaxed, relaxed, element, face, init_e, final_e)")
-    print("  - format_analysis_summary(analysis)")
