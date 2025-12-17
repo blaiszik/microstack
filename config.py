@@ -12,11 +12,11 @@ import os
 
 # Anthropic API key for Claude
 # Get yours at: https://console.anthropic.com/
-ANTHROPIC_API_KEY = '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' #os.environ.get("ANTHROPIC_API_KEY", "")
+ANTHROPIC_API_KEY =  os.environ.get("ANTHROPIC_API_KEY", "")
 
 # Materials Project API key
 # Get yours at: https://materialsproject.org/api
-MATERIALS_PROJECT_API_KEY = 'qEr9xoKkxe9EwXLpVHvMcEcwhlthbbSk' #os.environ.get("MP_API_KEY", "")
+MATERIALS_PROJECT_API_KEY = os.environ.get("MP_API_KEY", "")
 
 # =============================================================================
 # Model Settings
