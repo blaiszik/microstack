@@ -180,6 +180,9 @@ def run_workflow(query: str, session_id: str) -> WorkflowState:
     """
     Run the complete workflow.
 
+    If a session with the same ID exists, loads and continues from that state.
+    Otherwise, creates a new state.
+
     Args:
         query: User query string
         session_id: Session identifier
@@ -187,13 +190,30 @@ def run_workflow(query: str, session_id: str) -> WorkflowState:
     Returns:
         Final workflow state
     """
+    from microstack.agents.session_manager import (
+        get_session_state,
+        save_session_state,
+    )
+
     logger.info(f"Running workflow for session {session_id}: {query}")
 
-    # Create initial state
-    initial_state = WorkflowState(
-        session_id=session_id,
-        query=query,
-    )
+    # Try to load existing session state
+    initial_state = get_session_state(session_id)
+
+    if initial_state is None:
+        # New session - create fresh state
+        logger.info(f"Creating new session: {session_id}")
+        initial_state = WorkflowState(
+            session_id=session_id,
+            query=query,
+        )
+    else:
+        # Existing session - update query but keep structure/relaxation data
+        logger.info(f"Continuing session: {session_id}")
+        initial_state.query = query
+        # Clear errors from previous query but keep structure data
+        initial_state.errors = []
+        initial_state.warnings = []
 
     # Create and run workflow
     workflow = create_workflow()
@@ -202,6 +222,9 @@ def run_workflow(query: str, session_id: str) -> WorkflowState:
     # Ensure we return a WorkflowState object (LangGraph might return dict)
     if isinstance(final_state, dict):
         final_state = WorkflowState(**final_state)
+
+    # Save session state for future queries
+    save_session_state(session_id, final_state)
 
     logger.info(f"Workflow completed for session {session_id}")
     logger.info(f"Final state: {final_state.get_summary()}")

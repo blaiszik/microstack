@@ -23,9 +23,13 @@ from rich.table import Table
 
 from microstack.utils import config
 from microstack.utils.logging import get_logger
+from microstack.agents.session_manager import get_session_summary, list_sessions
 
 console = Console()
 logger = get_logger("cli")
+
+# Global session tracking
+_CURRENT_SESSION_ID = None
 
 
 @click.group(invoke_without_command=True)
@@ -307,11 +311,37 @@ def simulate(query: str) -> None:
     from microstack.agents.workflow import run_workflow
     from rich.table import Table
 
+    global _CURRENT_SESSION_ID
+
     console.print(f"\n[bold cyan]MicroStack Simulation Workflow[/bold cyan]\n")
     console.print(f"[cyan]Query:[/cyan] {query}\n")
 
-    # Create session ID
-    session_id = str(uuid.uuid4())[:8]
+    # Determine session ID
+    session_id = None
+
+    # Check if we have an active session and ask user
+    if _CURRENT_SESSION_ID is not None:
+        summary = get_session_summary(_CURRENT_SESSION_ID)
+        if summary:
+            console.print(
+                f"[yellow]Active session:[/yellow] {_CURRENT_SESSION_ID} "
+                f"({summary.get('formula', 'unknown')})\n"
+            )
+            continue_choice = console.input(
+                "[cyan]Continue with current session? [y/n]:[/cyan] "
+            ).strip().lower()
+            if continue_choice == "y":
+                session_id = _CURRENT_SESSION_ID
+            else:
+                session_id = str(uuid.uuid4())[:8]
+                console.print(f"[yellow]Starting new session:[/yellow] {session_id}\n")
+        else:
+            session_id = str(uuid.uuid4())[:8]
+    else:
+        # First query - create new session
+        session_id = str(uuid.uuid4())[:8]
+
+    _CURRENT_SESSION_ID = session_id
 
     try:
         # Run workflow

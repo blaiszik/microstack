@@ -48,6 +48,9 @@ def generate_structure(state: WorkflowState) -> WorkflowState:
     """
     Generate atomic structure using either simple surfaces or SciLink.
 
+    If a structure already exists in the session and no new structure is requested,
+    reuse the existing structure instead of generating a new one.
+
     Args:
         state: Workflow state object
 
@@ -63,6 +66,23 @@ def generate_structure(state: WorkflowState) -> WorkflowState:
         # Check if query parsing succeeded
         if parsed_params is None:
             state.add_error("Query parsing failed, no parameters extracted")
+            return state
+
+        # Check if structure already exists in session and no new structure requested
+        if state.atoms_object is not None and not parsed_params.material_formula:
+            logger.info("Reusing existing structure from current session")
+            state.add_warning("Using existing structure from session (no new structure specified in query)")
+            return state
+
+        # If no structure specified AND no atoms in state, raise error
+        if not parsed_params.material_formula and state.atoms_object is None:
+            error_msg = (
+                "No structure found in session and no material specified in query. "
+                "Please provide a structure specification (e.g., 'Al(111)', '2x2 Cu(100)') "
+                "or continue from a previous session."
+            )
+            logger.error(error_msg)
+            state.add_error(error_msg)
             return state
 
         # Determine if we should use SciLink
@@ -493,6 +513,12 @@ def relax_structure(state: WorkflowState) -> WorkflowState:
         atoms = state.atoms_object
         if atoms is None:
             state.add_error("No structure to relax")
+            return state
+
+        # Check if relaxed structure already exists in session and no new structure was requested
+        if state.atoms_relaxed is not None and not (state.parsed_params and state.parsed_params.material_formula):
+            logger.info("Reusing relaxed structure from current session")
+            state.add_warning("Using relaxed structure from session (no new structure specified)")
             return state
 
         # Check if relaxation was requested

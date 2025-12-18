@@ -117,6 +117,13 @@ def run_iets_simulation(state: WorkflowState) -> WorkflowState:
         tip_height = get_param("tip_height", 5.0)
         energy_range = get_param("energy_range", (-2.5, 2.5))
 
+        # Try to get GPAW file from previous STM simulation if not explicitly provided
+        if not gpaw_file and state.microscopy_results.get("stm"):
+            gpaw_file_from_stm = state.microscopy_results["stm"].get("gpaw_file")
+            if gpaw_file_from_stm and Path(gpaw_file_from_stm).exists():
+                gpaw_file = gpaw_file_from_stm
+                logger.info(f"Using GPAW file from previous STM simulation: {gpaw_file}")
+
         logger.info(
             f"IETS parameters: voltage={voltage}V, eta={eta}eV, sample_orbs={sample_orbs}"
         )
@@ -249,12 +256,60 @@ def run_iets_simulation(state: WorkflowState) -> WorkflowState:
                 logger.info(f"IETS_simple completed! Result shape: {iets_result.shape}")
 
                 # Save results
+                import numpy as np
+                import matplotlib.pyplot as plt
+
                 iets_file = iets_dir / f"iets_results_{data_format}.{data_format}"
                 if data_format == "npy":
-                    import numpy as np
-
                     np.save(str(iets_file), iets_result)
                     logger.info(f"Saved IETS results to {iets_file}")
+
+                # Generate visualization image
+                try:
+                    # Create a visualization of the IETS data
+                    # If 3D, show slices; if 2D, show directly
+                    iets_array = np.asarray(iets_result, dtype=np.float32)
+
+                    # Create a figure with subplots for different slices or data
+                    fig, axes = plt.subplots(1, 2 if iets_array.ndim >= 2 else 1, figsize=(12, 5))
+                    if iets_array.ndim < 2:
+                        axes = [axes]
+
+                    # For 3D data, show middle slice in x-y plane at middle z
+                    if iets_array.ndim == 3:
+                        middle_z = iets_array.shape[2] // 2
+                        slice_xy = iets_array[:, :, middle_z]
+                        im1 = axes[0].imshow(slice_xy, cmap="viridis", origin="lower")
+                        axes[0].set_title(f"IETS Map (z={middle_z})")
+                        axes[0].set_xlabel("X")
+                        axes[0].set_ylabel("Y")
+                        plt.colorbar(im1, ax=axes[0], label="Intensity")
+
+                        # Show line profile along x-axis at middle y
+                        middle_y = iets_array.shape[1] // 2
+                        line_profile = iets_array[:, middle_y, :]
+                        im2 = axes[1].imshow(line_profile, cmap="plasma", origin="lower", aspect="auto")
+                        axes[1].set_title(f"IETS Line Profile (y={middle_y})")
+                        axes[1].set_xlabel("X")
+                        axes[1].set_ylabel("Z")
+                        plt.colorbar(im2, ax=axes[1], label="Intensity")
+                    elif iets_array.ndim == 2:
+                        im = axes[0].imshow(iets_array, cmap="viridis", origin="lower")
+                        axes[0].set_title("IETS Data")
+                        axes[0].set_xlabel("X")
+                        axes[0].set_ylabel("Y")
+                        plt.colorbar(im, ax=axes[0], label="Intensity")
+
+                    plt.suptitle(f"IETS Simulation (V={voltage}V, η={eta}eV)")
+                    plt.tight_layout()
+
+                    image_file = iets_dir / f"iets_image.png"
+                    plt.savefig(str(image_file), dpi=150, bbox_inches="tight")
+                    plt.close()
+                    logger.info(f"Saved IETS visualization: {image_file}")
+
+                except Exception as e:
+                    logger.warning(f"Failed to generate IETS visualization: {e}")
 
                 # Export to NSID format if enabled
                 nsid_file = None
