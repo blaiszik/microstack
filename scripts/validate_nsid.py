@@ -347,42 +347,45 @@ def analyze_image_with_pycroscopy(dataset, data, filepath, path, output_dir, ver
         except Exception as e:
             print(f"      ⚠️  FFT failed: {e}")
     
-    # Create visualization
-    n_cols = 4 if power_spec is not None else 3
-    fig, axes = plt.subplots(1, n_cols, figsize=(5*n_cols, 4))
+    # Create visualization (2x2 grid)
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # Main image
-    im = axes[0].imshow(data, cmap='viridis', origin='lower')
-    axes[0].set_title(f'{dataset.title or "Image"}')
-    axes[0].set_xlabel(f'x ({dataset._axes[1].units})')
-    axes[0].set_ylabel(f'y ({dataset._axes[0].units})')
-    plt.colorbar(im, ax=axes[0], label=dataset.units)
+    # Main image (top-left)
+    im = axes[0, 0].imshow(data, cmap='viridis', origin='lower')
+    axes[0, 0].set_title(f'{dataset.title or "Image"}')
+    axes[0, 0].set_xlabel(f'x ({dataset._axes[1].units})')
+    axes[0, 0].set_ylabel(f'y ({dataset._axes[0].units})')
+    plt.colorbar(im, ax=axes[0, 0], label=dataset.units)
     
-    # Histogram
-    axes[1].hist(data.flatten(), bins=50, color='steelblue', edgecolor='black', alpha=0.7)
-    axes[1].set_xlabel(f'Value ({dataset.units})')
-    axes[1].set_ylabel('Count')
-    axes[1].set_title('Intensity Histogram')
-    axes[1].axvline(np.mean(data), color='red', linestyle='--', label=f'Mean: {np.mean(data):.3g}')
-    axes[1].legend()
+    # Histogram (top-right)
+    axes[0, 1].hist(data.flatten(), bins=50, color='steelblue', edgecolor='black', alpha=0.7)
+    axes[0, 1].set_xlabel(f'Value ({dataset.units})')
+    axes[0, 1].set_ylabel('Count')
+    axes[0, 1].set_title('Intensity Histogram')
+    axes[0, 1].axvline(np.mean(data), color='red', linestyle='--', label=f'Mean: {np.mean(data):.3g}')
+    axes[0, 1].legend()
     
-    # Line profile (middle row)
+    # Line profile (bottom-left)
     mid_row = data.shape[0] // 2
     x_vals = np.array(dataset._axes[1].values) if hasattr(dataset._axes[1], 'values') else np.arange(data.shape[1])
-    axes[2].plot(x_vals, data[mid_row, :], 'b-', linewidth=1.5)
-    axes[2].set_xlabel(f'x ({dataset._axes[1].units})')
-    axes[2].set_ylabel(f'Intensity ({dataset.units})')
-    axes[2].set_title(f'Line Profile (row {mid_row})')
-    axes[2].grid(True, alpha=0.3)
+    axes[1, 0].plot(x_vals, data[mid_row, :], 'b-', linewidth=1.5)
+    axes[1, 0].set_xlabel(f'x ({dataset._axes[1].units})')
+    axes[1, 0].set_ylabel(f'Intensity ({dataset.units})')
+    axes[1, 0].set_title(f'Line Profile (row {mid_row})')
+    axes[1, 0].grid(True, alpha=0.3)
     
-    # Power spectrum (if available)
+    # Power spectrum (bottom-right)
     if power_spec is not None:
         ps_data = np.array(power_spec)
-        im_ps = axes[3].imshow(np.log10(ps_data + 1), cmap='inferno', origin='lower')
-        axes[3].set_title('FFT Power Spectrum (log)')
-        axes[3].set_xlabel('kx')
-        axes[3].set_ylabel('ky')
-        plt.colorbar(im_ps, ax=axes[3], label='log(Power)')
+        im_ps = axes[1, 1].imshow(np.log10(ps_data + 1), cmap='inferno', origin='lower')
+        axes[1, 1].set_title('FFT Power Spectrum (log)')
+        axes[1, 1].set_xlabel('kx')
+        axes[1, 1].set_ylabel('ky')
+        plt.colorbar(im_ps, ax=axes[1, 1], label='log(Power)')
+    else:
+        axes[1, 1].text(0.5, 0.5, 'FFT not available', ha='center', va='center', transform=axes[1, 1].transAxes)
+        axes[1, 1].set_title('FFT Power Spectrum')
+        axes[1, 1].axis('off')
     
     plt.tight_layout()
     
