@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         description="Gemini model to use for query parsing",
     )
     scilink_generator_model: str = Field(
-        default="gemini-2.5-flash",
+        default="gemini-3-flash-preview",
         description="Gemini model to use for SciLink's StructureGenerator",
     )
 
@@ -248,8 +248,8 @@ class Settings(BaseSettings):
         description="STM line scan number of points",
     )
     stm_gpaw_mode: str = Field(
-        default="pw",
-        description="GPAW calculation mode (pw, lcao, fd, etc.)",
+        default="lcao",
+        description="GPAW calculation mode (lcao, pw, fd, etc.) - lcao required for IETS wavefunction data",
     )
     stm_gpaw_kpts: tuple[int, int, int] = Field(
         default=(4, 4, 1),
@@ -382,13 +382,67 @@ class Settings(BaseSettings):
         description="IETS plot results flag",
     )
 
+    # ===== TEM Default Parameters (abTEM-based) =====
+    tem_energy: float = Field(
+        default=200.0,
+        description="TEM beam energy in keV (default 200 keV)",
+    )
+    tem_slice_thickness: float = Field(
+        default=1.0,
+        description="Multislice thickness in Angstrom (default 1.0)",
+    )
+    tem_parametrization: str = Field(
+        default="lobato",
+        description="Atomic form factor parametrization (lobato, peng, kirkland)",
+    )
+    tem_projection: str = Field(
+        default="infinite",
+        description="Projection type (infinite, finite)",
+    )
+    tem_gpts: int = Field(
+        default=128,
+        description="Grid points for potential calculation (128 x 128 default)",
+    )
+    tem_sampling: float = Field(
+        default=0.1,
+        description="Sampling rate in pixels/Angstrom (0.1 default)",
+    )
+    tem_tilt_x: float = Field(
+        default=0.0,
+        description="Beam tilt in x direction (mrad)",
+    )
+    tem_tilt_y: float = Field(
+        default=0.0,
+        description="Beam tilt in y direction (mrad)",
+    )
+    tem_detector_type: str = Field(
+        default="annular",
+        description="Detector type (annular, pixelated)",
+    )
+    tem_detector_inner: float = Field(
+        default=0.0,
+        description="Detector inner radius in mrad",
+    )
+    tem_detector_outer: Optional[float] = Field(
+        default=None,
+        description="Detector outer radius in mrad (None = use cutoff)",
+    )
+    tem_normalize: bool = Field(
+        default=False,
+        description="Normalize plane wave intensity",
+    )
+    tem_device: Optional[str] = Field(
+        default=None,
+        description="Computation device (cpu, cuda, None = auto)",
+    )
+
     # ===== Logging Configuration =====
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO",
         description="Logging level",
     )
     log_file: Optional[Path] = Field(
-        default=Path("./atomic.log"),
+        default=Path("./microstack.log"),
         description="Log file path (None to disable file logging)",
     )
     log_to_console: bool = Field(
@@ -422,7 +476,7 @@ class Settings(BaseSettings):
         ge=1,
     )
     max_retries: int = Field(
-        default=3,
+        default=10,
         description="Maximum retry attempts for API calls",
         ge=0,
     )

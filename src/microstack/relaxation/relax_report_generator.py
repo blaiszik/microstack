@@ -137,8 +137,24 @@ def generate_natural_description(
     relaxation = analysis.get("relaxation", {})
     comparison = analysis.get("comparison", {})
     layer_changes = relaxation.get("layer_changes_percent", {})
+    microscopy_results = analysis.get("microscopy_results", {})
 
-    prompt = f"""Write a single paragraph (3-4 sentences) natural language description of this surface relaxation simulation result.
+    # Build microscopy section if results are available
+    microscopy_section = ""
+    if microscopy_results:
+        microscopy_section = "\n\nMicroscopy Simulations Performed:"
+        for micro_type, results in microscopy_results.items():
+            if isinstance(results, dict) and results:
+                microscopy_section += f"\n- {micro_type.upper()}:"
+                # Include key parameters
+                for key, value in results.items():
+                    if key not in ["results_file", "auxmaps_file", "parameters_file", "status", "method", "note", "error"]:
+                        if isinstance(value, (int, float)):
+                            microscopy_section += f"\n  • {key}: {value}"
+                        elif isinstance(value, str) and len(str(value)) < 100:
+                            microscopy_section += f"\n  • {key}: {value}"
+
+    prompt = f"""Write a single paragraph (3-5 sentences) natural language description of this surface relaxation and microscopy simulation result.
 The description should be accessible to someone with basic chemistry knowledge but not necessarily a surface science expert.
 
 Simulation Results:
@@ -147,7 +163,7 @@ Simulation Results:
 - Maximum atomic displacement: {relaxation.get('max_displacement', 0):.3f} Angstroms
 - Number of atoms: {relaxation.get('n_atoms', 'unknown')}
 - Layer spacing changes: {json.dumps(layer_changes, indent=2)}
-- Agreement with reference data: {comparison.get('overall_agreement', 'not available')}
+- Agreement with reference data: {comparison.get('overall_agreement', 'not available')}{microscopy_section}
 
 Write in a clear, informative style. Include key numerical results. No headers or bullet points."""
 

@@ -1,6 +1,6 @@
 """Pydantic models for LLM query parsing."""
 
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -15,8 +15,11 @@ class ParsedQuery(BaseModel):
         default=None,
         description="Type of task (microscopy simulation or structure generation)",
     )
-    microscopy_type: Optional[Literal["AFM", "STM", "IETS"]] = Field(
-        default=None, description="Type of microscopy simulation requested"
+    microscopy_type: Optional[
+        Union[Literal["AFM", "STM", "IETS", "TEM"], list[Literal["AFM", "STM", "IETS", "TEM"]]]
+    ] = Field(
+        default=None,
+        description="Type of microscopy simulation requested (single value or list in execution order)",
     )
 
     # Material specifications
@@ -223,7 +226,7 @@ class ParsedQuery(BaseModel):
     )
     stm_gpaw_mode: Optional[str] = Field(
         default=None,
-        description="GPAW calculation mode (pw, lcao, fd, etc.)",
+        description="GPAW calculation mode (lcao, pw, fd, etc.) - lcao required for IETS wavefunction data",
     )
     stm_gpaw_kpts: Optional[tuple[int, int, int]] = Field(
         default=None,
@@ -342,6 +345,60 @@ class ParsedQuery(BaseModel):
     iets_effective_mass: Optional[float] = Field(
         default=None,
         description="IETS effective mass (Atomic Units)",
+    )
+
+    # TEM-specific parameters
+    tem_energy: Optional[float] = Field(
+        default=None,
+        description="TEM beam energy (keV)",
+    )
+    tem_slice_thickness: Optional[float] = Field(
+        default=None,
+        description="TEM slice thickness for multislice (Angstrom)",
+    )
+    tem_parametrization: Optional[str] = Field(
+        default=None,
+        description="Atomic parametrization (lobato, peng, kirkland)",
+    )
+    tem_projection: Optional[str] = Field(
+        default=None,
+        description="Projection type (infinite, finite, etc.)",
+    )
+    tem_gpts: Optional[int] = Field(
+        default=None,
+        description="Grid points for potential calculation",
+    )
+    tem_sampling: Optional[float] = Field(
+        default=None,
+        description="Sampling rate (pixels per Angstrom)",
+    )
+    tem_tilt_x: Optional[float] = Field(
+        default=None,
+        description="Beam tilt in x direction (mrad)",
+    )
+    tem_tilt_y: Optional[float] = Field(
+        default=None,
+        description="Beam tilt in y direction (mrad)",
+    )
+    tem_detector_type: Optional[str] = Field(
+        default=None,
+        description="Detector type (annular, pixelated)",
+    )
+    tem_detector_inner: Optional[float] = Field(
+        default=None,
+        description="Detector inner radius (mrad)",
+    )
+    tem_detector_outer: Optional[float] = Field(
+        default=None,
+        description="Detector outer radius (mrad)",
+    )
+    tem_normalize: Optional[bool] = Field(
+        default=None,
+        description="Normalize plane wave intensity",
+    )
+    tem_device: Optional[str] = Field(
+        default=None,
+        description="Computation device (cpu, cuda, etc.)",
     )
 
     # General metadata

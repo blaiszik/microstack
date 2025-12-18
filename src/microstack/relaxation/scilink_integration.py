@@ -4,13 +4,15 @@ import uuid  # New import
 from typing import Dict, Any, Optional
 
 from scilink.agents.sim_agents.structure_agent import StructureGenerator
+from scilink.agents.sim_agents import structure_agent
 from scilink.executors import DEFAULT_TIMEOUT
 from microstack.utils.settings import settings
 from microstack.utils.exceptions import LLMConnectionError
 from microstack.llm.models import ParsedQuery
 
 # Use the existing max_retries setting for SciLink code generation
-MAX_SCILINK_RETRIES = settings.max_retries
+# structure_agent.MAX_INTERNAL_SCRIPT_EXEC_CORRECTION_ATTEMPTS = 15
+MAX_SCILINK_RETRIES = 15
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ class SciLinkIntegration:
                 model_name=settings.scilink_generator_model,
                 executor_timeout=DEFAULT_TIMEOUT,
                 generated_script_dir=self.output_dir,
-                mp_api_key=settings.mp_api_key,  # Corrected to use settings.mp_api_key
+                mp_api_key=settings.mp_api_key,
             )
             logger.info("Initialized SciLink StructureGenerator.")
         except Exception as e:

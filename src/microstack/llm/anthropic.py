@@ -134,12 +134,12 @@ Use null for any missing values."""
             ):
                 response_dict["confidence"] = 1.0
 
-            # Fix ambiguities field if it's a string
-            if response_dict.get("ambiguities") and isinstance(
-                response_dict["ambiguities"], str
-            ):
-                ambig_str = response_dict["ambiguities"]
+            # Fix ambiguities field - ensure it's always a list
+            if response_dict.get("ambiguities") is None or "ambiguities" not in response_dict:
+                response_dict["ambiguities"] = []
+            elif isinstance(response_dict["ambiguities"], str):
                 # Convert to list with single element if it's a string
+                ambig_str = response_dict["ambiguities"]
                 response_dict["ambiguities"] = [ambig_str] if ambig_str else []
 
             # Fix missing_parameters field if it's a string
@@ -155,15 +155,53 @@ Use null for any missing values."""
             # Keyword-based fallback for microscopy type detection
             query_lower = user_query.lower()
             if not response_dict.get("microscopy_type"):
-                if "iets" in query_lower:
-                    response_dict["microscopy_type"] = "IETS"
+                # Detect multiple microscopy types in order of appearance
+                detected_types = []
+                # Check for each type in the order they appear in the query
+                for word in query_lower.split():
+                    if word == "afm" and "afm" not in [t.lower() for t in detected_types]:
+                        detected_types.append("AFM")
+                    elif word == "stm" and "stm" not in [t.lower() for t in detected_types]:
+                        detected_types.append("STM")
+                    elif word == "iets" and "iets" not in [t.lower() for t in detected_types]:
+                        detected_types.append("IETS")
+                    elif word == "tem" and "tem" not in [t.lower() for t in detected_types]:
+                        detected_types.append("TEM")
+
+                if detected_types:
+                    # If single type, keep as string; if multiple, keep as list
+                    response_dict["microscopy_type"] = (
+                        detected_types[0] if len(detected_types) == 1 else detected_types
+                    )
                     response_dict["task_type"] = "Microscopy_Simulation"
-                elif "stm" in query_lower:
-                    response_dict["microscopy_type"] = "STM"
-                    response_dict["task_type"] = "Microscopy_Simulation"
-                elif "afm" in query_lower:
-                    response_dict["microscopy_type"] = "AFM"
-                    response_dict["task_type"] = "Microscopy_Simulation"
+
+            # Keyword-based fallback for GPAW mode detection
+            if not response_dict.get("stm_gpaw_mode") and response_dict.get(
+                "microscopy_type"
+            ):
+                # Check if STM or IETS is requested
+                micro_types = response_dict["microscopy_type"]
+                if isinstance(micro_types, str):
+                    micro_types = [micro_types]
+                if micro_types and (
+                    "STM" in micro_types or "IETS" in micro_types
+                ):
+                    # Look for GPAW mode keywords in the query
+                    if "lcao" in query_lower:
+                        response_dict["stm_gpaw_mode"] = "lcao"
+                        logger.info(f"Detected GPAW mode: lcao")
+                    elif "pw" in query_lower or "plane-wave" in query_lower:
+                        response_dict["stm_gpaw_mode"] = "pw"
+                        logger.info(f"Detected GPAW mode: pw")
+                    elif "fd" in query_lower or "finite-difference" in query_lower:
+                        response_dict["stm_gpaw_mode"] = "fd"
+                        logger.info(f"Detected GPAW mode: fd")
+                    # If IETS is requested and no mode specified, default to lcao
+                    elif "iets" in query_lower.lower() and "IETS" in micro_types:
+                        response_dict["stm_gpaw_mode"] = "lcao"
+                        logger.info(
+                            "Auto-selected GPAW mode: lcao (required for IETS)"
+                        )
 
             result = ParsedQuery(**response_dict)
 

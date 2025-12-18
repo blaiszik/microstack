@@ -8,6 +8,7 @@ from ase.io import write, read
 from ase import Atoms
 
 from microstack.agents.state import WorkflowState
+from microstack.agents.structure_validator import validate_structure, fix_structure_vacuum
 from microstack.relaxation.generate_surfaces import create_surface
 from microstack.relaxation.surface_relaxation import (
     load_model,
@@ -75,9 +76,13 @@ def generate_structure(state: WorkflowState) -> WorkflowState:
         if use_scilink or parsed_params.task_type == "SciLink_Structure_Generation":
             logger.info("Using SciLink for structure generation")
             atoms = _generate_with_scilink(state)
-            # If SciLink fails, fall back to simple surface generation
+            # If SciLink fails, fall back to Materials Project + ASE
             if atoms is None:
-                logger.info("SciLink failed, falling back to simple surface generation")
+                logger.info("SciLink failed, falling back to Materials Project + ASE")
+                atoms = _generate_with_materials_project(state)
+            # If Materials Project fails, fall back to simple surface generation
+            if atoms is None:
+                logger.info("Materials Project failed, falling back to simple surface generation")
                 atoms = _generate_simple_surface(state)
         else:
             logger.info("Using simple surface generation")
@@ -86,6 +91,50 @@ def generate_structure(state: WorkflowState) -> WorkflowState:
         if atoms is None:
             state.add_error("Failed to generate structure")
             return state
+
+        # Validate structure before proceeding to relaxation
+        is_valid, validation_msg = validate_structure(atoms)
+
+        # Retry full regeneration if structure is invalid
+        max_regenerate_attempts = 3
+        attempt = 1
+        while not is_valid and attempt < max_regenerate_attempts:
+            logger.warning(
+                f"Structure validation failed (attempt {attempt}/{max_regenerate_attempts}): {validation_msg}"
+            )
+            state.add_warning(
+                f"Structure validation failed: {validation_msg}. Regenerating structure..."
+            )
+
+            # Regenerate the entire structure
+            logger.info("Regenerating structure...")
+            atoms = None
+
+            # Try generation methods in order
+            if use_scilink or parsed_params.task_type == "SciLink_Structure_Generation":
+                atoms = _generate_with_scilink(state)
+                if atoms is None:
+                    atoms = _generate_with_materials_project(state)
+                if atoms is None:
+                    atoms = _generate_simple_surface(state)
+            else:
+                atoms = _generate_simple_surface(state)
+
+            if atoms is None:
+                logger.warning("Failed to regenerate structure, aborting")
+                break
+
+            # Re-validate
+            is_valid, validation_msg = validate_structure(atoms)
+            attempt += 1
+
+        if not is_valid:
+            error_msg = f"Structure validation failed after {max_regenerate_attempts} attempts: {validation_msg}"
+            logger.error(error_msg)
+            state.add_error(error_msg)
+            return state
+
+        logger.info(f"Structure validation passed: {validation_msg}")
 
         # Store atoms object and info
         state.atoms_object = atoms
@@ -157,6 +206,11 @@ def _generate_with_scilink(state: WorkflowState) -> Optional[Atoms]:
         # Generate structure using SciLink
         result = scilink_client.generate_surface_structure(parsed_params)
 
+        # Check if result is None or doesn't have expected structure
+        if result is None or not isinstance(result, dict):
+            logger.error("SciLink returned invalid result (None or not a dict)")
+            return None
+
         if result["status"] != "success":
             logger.error(
                 f"SciLink generation failed: {result.get('message', 'Unknown error')}"
@@ -192,6 +246,137 @@ def _generate_with_scilink(state: WorkflowState) -> Optional[Atoms]:
         return None
 
 
+def _generate_with_materials_project(state: WorkflowState) -> Optional[Atoms]:
+    """
+    Generate structure using Materials Project API and ASE.
+
+    Args:
+        state: Workflow state
+
+    Returns:
+        ASE Atoms object or None if generation fails
+    """
+    try:
+        from pymatgen.ext.matproj import MPRester
+        from pymatgen.io.ase import AseAtomsAdaptor
+        from ase.build import add_vacuum
+
+        parsed_params = state.parsed_params
+        logger.info("Generating structure with Materials Project + ASE...")
+
+        # Get material specification from parsed params
+        material_formula = parsed_params.material_formula
+        material_id = parsed_params.material_id
+        structure_source = parsed_params.structure_source
+
+        if not (material_formula or material_id):
+            logger.error("No material formula or ID provided for Materials Project lookup")
+            return None
+
+        # Initialize Materials Project API
+        try:
+            mpr = MPRester()
+        except Exception as e:
+            logger.error(f"Failed to initialize Materials Project API: {e}")
+            state.add_warning(
+                "Materials Project API not available (missing API key or network issue)"
+            )
+            return None
+
+        # Fetch structure from Materials Project
+        try:
+            if material_id:
+                # Use material ID if provided
+                logger.info(f"Fetching structure for material ID: {material_id}")
+                structure = mpr.get_structure_by_material_id(material_id)
+            else:
+                # Search by formula
+                logger.info(f"Searching Materials Project for: {material_formula}")
+                results = mpr.query(
+                    criteria={"pretty_formula": material_formula},
+                    properties=["structure", "energy_per_atom"],
+                )
+
+                if not results:
+                    logger.error(f"No results found for formula: {material_formula}")
+                    return None
+
+                # Use the most stable structure (lowest energy per atom)
+                structure = results[0]["structure"]
+                logger.info(f"Using most stable structure: {results[0]['pretty_formula']}")
+
+            # Convert PyMatGen structure to ASE Atoms
+            atoms = AseAtomsAdaptor.get_atoms(structure)
+            logger.info(f"Fetched bulk structure with {len(atoms)} atoms")
+
+            # Generate surface from bulk structure
+            face = getattr(parsed_params, "surface_miller_indices", None)
+            if not face:
+                face = (1, 0, 0)
+
+            # Convert face to string format if needed
+            if isinstance(face, (list, tuple)):
+                face_str = "".join(str(i) for i in face)
+            else:
+                face_str = str(face)
+
+            # Use ASE's surface builder to create surface
+            from ase.build import surface as build_surface
+
+            layers = 4  # Default number of layers
+            vacuum = (
+                parsed_params.vacuum_thickness
+                or parsed_params.vacuum_size
+                or 15.0
+            )
+
+            try:
+                # Get lattice constant from bulk structure
+                surface_atoms = build_surface(
+                    atoms,
+                    face,
+                    layers,
+                    vacuum=vacuum / 10,  # Convert to internal ASE units (0.1 nm)
+                )
+                logger.info(
+                    f"Generated {face_str} surface with {len(surface_atoms)} atoms"
+                )
+
+                # Set periodic boundary conditions based on vacuum specification
+                has_vacuum = vacuum and vacuum > 0
+                if has_vacuum:
+                    surface_atoms.set_pbc([True, True, False])
+                    logger.info("Set PBC: [True, True, False] (slab with vacuum)")
+                else:
+                    surface_atoms.set_pbc([True, True, True])
+                    logger.info("Set PBC: [True, True, True] (fully periodic)")
+
+                return surface_atoms
+
+            except Exception as e:
+                logger.error(f"Failed to build surface from bulk structure: {e}")
+                logger.info("Falling back to using bulk structure as-is")
+                add_vacuum(atoms, vacuum / 10)
+                atoms.set_pbc([True, True, True])
+                return atoms
+
+        except Exception as e:
+            logger.error(f"Failed to fetch structure from Materials Project: {e}")
+            state.add_warning(f"Materials Project fetch failed: {str(e)}")
+            return None
+
+    except ImportError:
+        logger.warning("PyMatGen or Materials Project tools not available")
+        state.add_warning(
+            "PyMatGen not available for Materials Project integration"
+        )
+        return None
+    except Exception as e:
+        logger.error(f"Materials Project generation failed: {e}", exc_info=True)
+        state.add_error(f"Materials Project generation error: {str(e)}")
+        return None
+
+
 def _generate_simple_surface(state: WorkflowState) -> Optional[Atoms]:
     """
     Generate simple FCC surface using existing create_surface function.
@@ -219,6 +404,28 @@ def _generate_simple_surface(state: WorkflowState) -> Optional[Atoms]:
 
         # Use existing create_surface function
         atoms, _ = create_surface(element, face, state.session_id)
+
+        # Determine PBC settings based on vacuum specification
+        # If vacuum is explicitly specified with a distance, use non-periodic in z (slab)
+        # Otherwise, use fully periodic (bulk)
+        has_vacuum = (
+            hasattr(parsed_params, "vacuum_thickness")
+            and parsed_params.vacuum_thickness is not None
+            and parsed_params.vacuum_thickness > 0
+        ) or (
+            hasattr(parsed_params, "vacuum_size")
+            and parsed_params.vacuum_size is not None
+            and parsed_params.vacuum_size > 0
+        )
+
+        if has_vacuum:
+            # Slab structure with vacuum: periodic in x,y, non-periodic in z
+            atoms.set_pbc([True, True, False])
+            logger.info("Set PBC: [True, True, False] (slab with vacuum)")
+        else:
+            # Fully periodic structure (bulk)
+            atoms.set_pbc([True, True, True])
+            logger.info("Set PBC: [True, True, True] (fully periodic)")
 
         logger.info(f"Simple surface generated: {atoms.get_chemical_formula()}")
         return atoms
@@ -249,9 +456,9 @@ def _build_scilink_prompt(parsed_params: ParsedQuery, original_query: str) -> st
     parts = []
 
     # Get supercell dimensions
-    x = parsed_params.supercell_x or 3
-    y = parsed_params.supercell_y or 3
-    z = parsed_params.supercell_z or 4
+    x = parsed_params.supercell_x or 1
+    y = parsed_params.supercell_y or 1
+    z = parsed_params.supercell_z or 1
     size = f"{x}x{y}x{z}"
 
     # Get surface face

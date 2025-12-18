@@ -2,12 +2,42 @@
 
 from pathlib import Path
 import os
+import logging
+import sys
+from io import StringIO
 
 from microstack.agents.state import WorkflowState
 from microstack.utils.logging import get_logger
 from microstack.utils.settings import settings
 
 logger = get_logger("agents.microscopy.iets")
+
+# Suppress verbose C++ compilation warnings and debug messages from external libraries
+logging.getLogger("ppafm").setLevel(logging.ERROR)
+logging.getLogger("pyPPSTM").setLevel(logging.ERROR)
+logging.getLogger("ProbeParticle").setLevel(logging.ERROR)
+
+# Also suppress stdout/stderr during C++ library import and compilation
+_original_stdout = None
+_original_stderr = None
+
+
+def _suppress_compilation_output():
+    """Suppress C++ compilation warnings during library import."""
+    global _original_stdout, _original_stderr
+    _original_stdout = sys.stdout
+    _original_stderr = sys.stderr
+    sys.stdout = StringIO()
+    sys.stderr = StringIO()
+
+
+def _restore_output():
+    """Restore stdout/stderr after compilation."""
+    global _original_stdout, _original_stderr
+    if _original_stdout:
+        sys.stdout = _original_stdout
+    if _original_stderr:
+        sys.stderr = _original_stderr
 
 
 def run_iets_simulation(state: WorkflowState) -> WorkflowState:
@@ -111,15 +141,20 @@ def run_iets_simulation(state: WorkflowState) -> WorkflowState:
                 sys.path.insert(0, str(ppstm_path))
                 logger.info(f"Added PPSTM path to sys.path: {ppstm_path}")
 
-            import pyPPSTM as PS
-            import pyPPSTM.ReadSTM as RS
-            import ppafm.io as io
+            # Suppress C++ compilation output during library import
+            _suppress_compilation_output()
+            try:
+                import pyPPSTM as PS
+                import pyPPSTM.ReadSTM as RS
+                import ppafm.io as io
+            finally:
+                _restore_output()
 
             logger.info("pyPPSTM found - running full IETS simulation")
 
             # Load GPAW DFT data
             if gpaw_file is None:
-                gpaw_file = structure_dir / "microscopy/calculation.gpw"
+                gpaw_file = structure_dir / "microscopy" / "stm" / "calculation.gpw"
                 logger.warning(f"No GPAW file specified, using default: {gpaw_file}")
 
             if not Path(gpaw_file).exists():
@@ -131,15 +166,45 @@ def run_iets_simulation(state: WorkflowState) -> WorkflowState:
 
             # Load DFT data (if file exists)
             if Path(gpaw_file).exists():
-                eigEn, coefs, Ratin = RS.read_GPAW_all(
-                    name=str(gpaw_file),
-                    fermi=fermi,
-                    orbs=sample_orbs,
-                    pbc=pbc,
-                    cut_min=cut_min,
-                    cut_max=cut_max,
-                )
-                logger.info("GPAW data loaded successfully")
+                try:
+                    # Suppress output during GPAW data loading
+                    _suppress_compilation_output()
+                    try:
+                        eigEn, coefs, Ratin = RS.read_GPAW_all(
+                            name=str(gpaw_file),
+                            fermi=fermi,
+                            orbs=sample_orbs,
+                            pbc=pbc,
+                            cut_min=cut_min,
+                            cut_max=cut_max,
+                        )
+                    finally:
+                        _restore_output()
+                    # Validate that wavefunction data was loaded
+                    if coefs is None or (isinstance(coefs, list) and len(coefs) == 0):
+                        logger.error(
+                            "GPAW file does not contain wavefunction coefficient data. "
+                            "This can happen if the GPAW calculation was run without LCAO mode or if the file is incomplete."
+                        )
+                        state.add_error(
+                            "IETS simulation failed: GPAW file missing wavefunction data. "
+                            "Ensure STM calculation is run with GPAW in LCAO mode."
+                        )
+                        return state
+                    logger.info("GPAW data loaded successfully")
+                except TypeError as e:
+                    if "NoneType" in str(e):
+                        logger.error(
+                            "GPAW wavefunction data is None - this typically means the GPAW calculation "
+                            "was not run with LCAO basis or the file doesn't contain coefficient data."
+                        )
+                        state.add_error(
+                            "IETS simulation failed: GPAW file incomplete. "
+                            "STM must be run in LCAO mode for IETS to work."
+                        )
+                        return state
+                    else:
+                        raise
 
                 # Generate tip grid
                 logger.info("Generating tip position grid")
@@ -155,26 +220,30 @@ def run_iets_simulation(state: WorkflowState) -> WorkflowState:
                     z_range[2],
                 )
 
-                # Run IETS_simple calculation
+                # Run IETS_simple calculation with suppressed output
                 logger.info("Running IETS_simple calculation")
-                iets_result = PS.IETS_simple(
-                    voltage,
-                    work_function,
-                    eta,
-                    eigEn,
-                    tip_r,
-                    Ratin,
-                    coefs,
-                    orbs=sample_orbs,
-                    s=s_orbital,
-                    px=px_orbital,
-                    py=py_orbital,
-                    pz=pz_orbital,
-                    dxz=dxz_orbital,
-                    dyz=dyz_orbital,
-                    dz2=dz2_orbital,
-                    Amp=amplitude,
-                )
+                _suppress_compilation_output()
+                try:
+                    iets_result = PS.IETS_simple(
+                        voltage,
+                        work_function,
+                        eta,
+                        eigEn,
+                        tip_r,
+                        Ratin,
+                        coefs,
+                        orbs=sample_orbs,
+                        s=s_orbital,
+                        px=px_orbital,
+                        py=py_orbital,
+                        pz=pz_orbital,
+                        dxz=dxz_orbital,
+                        dyz=dyz_orbital,
+                        dz2=dz2_orbital,
+                        Amp=amplitude,
+                    )
+                finally:
+                    _restore_output()
 
                 logger.info(f"IETS_simple completed! Result shape: {iets_result.shape}")
 

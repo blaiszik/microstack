@@ -85,9 +85,59 @@ class DeepSeekClient:
             # Parse the query
             result = structured_llm.invoke(messages)
 
+            # Ensure list fields are properly initialized
+            if result.ambiguities is None:
+                result.ambiguities = []
+            if result.missing_parameters is None:
+                result.missing_parameters = []
+
+            # Keyword-based fallback for microscopy type detection (including TEM)
+            query_lower = user_query.lower()
+            if not result.microscopy_type:
+                detected_types = []
+                for word in query_lower.split():
+                    if word == "afm" and "afm" not in [t.lower() for t in detected_types]:
+                        detected_types.append("AFM")
+                    elif word == "stm" and "stm" not in [t.lower() for t in detected_types]:
+                        detected_types.append("STM")
+                    elif word == "iets" and "iets" not in [t.lower() for t in detected_types]:
+                        detected_types.append("IETS")
+                    elif word == "tem" and "tem" not in [t.lower() for t in detected_types]:
+                        detected_types.append("TEM")
+
+                if detected_types:
+                    result.microscopy_type = (
+                        detected_types[0] if len(detected_types) == 1 else detected_types
+                    )
+
+            # Keyword-based fallback for GPAW mode detection
+            if not result.stm_gpaw_mode and result.microscopy_type:
+                # Check if STM or IETS is requested
+                micro_types = result.microscopy_type
+                if isinstance(micro_types, str):
+                    micro_types = [micro_types]
+                if micro_types and ("STM" in micro_types or "IETS" in micro_types):
+                    query_lower = user_query.lower()
+                    # Look for GPAW mode keywords in the query
+                    if "lcao" in query_lower:
+                        result.stm_gpaw_mode = "lcao"
+                        logger.info(f"Detected GPAW mode: lcao")
+                    elif "pw" in query_lower or "plane-wave" in query_lower:
+                        result.stm_gpaw_mode = "pw"
+                        logger.info(f"Detected GPAW mode: pw")
+                    elif "fd" in query_lower or "finite-difference" in query_lower:
+                        result.stm_gpaw_mode = "fd"
+                        logger.info(f"Detected GPAW mode: fd")
+                    # If IETS is requested and no mode specified, default to lcao
+                    elif "iets" in query_lower and "IETS" in micro_types:
+                        result.stm_gpaw_mode = "lcao"
+                        logger.info("Auto-selected GPAW mode: lcao (required for IETS)")
+
             logger.info(f"Parsed task type: {result.task_type}")
             if result.material_formula:
                 logger.info(f"Parsed material: {result.material_formula}")
+            if result.stm_gpaw_mode:
+                logger.info(f"GPAW mode: {result.stm_gpaw_mode}")
             if result.ambiguities:
                 logger.warning(f"Query has ambiguities: {result.ambiguities}")
 

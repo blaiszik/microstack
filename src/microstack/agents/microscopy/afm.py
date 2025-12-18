@@ -4,12 +4,42 @@ from pathlib import Path
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import logging
+import sys
+from io import StringIO
 
 from microstack.agents.state import WorkflowState
 from microstack.utils.logging import get_logger
 from microstack.utils.settings import settings
 
 logger = get_logger("agents.microscopy.afm")
+
+# Suppress verbose C++ compilation warnings and debug messages from external libraries
+logging.getLogger("ppafm").setLevel(logging.ERROR)
+logging.getLogger("pyPPSTM").setLevel(logging.ERROR)
+logging.getLogger("ProbeParticle").setLevel(logging.ERROR)
+
+# Also suppress stdout/stderr during C++ library import and compilation
+_original_stdout = None
+_original_stderr = None
+
+
+def _suppress_compilation_output():
+    """Suppress C++ compilation warnings during library import."""
+    global _original_stdout, _original_stderr
+    _original_stdout = sys.stdout
+    _original_stderr = sys.stderr
+    sys.stdout = StringIO()
+    sys.stderr = StringIO()
+
+
+def _restore_output():
+    """Restore stdout/stderr after compilation."""
+    global _original_stdout, _original_stderr
+    if _original_stdout:
+        sys.stdout = _original_stdout
+    if _original_stderr:
+        sys.stderr = _original_stderr
 
 
 def run_afm_simulation(state: WorkflowState) -> WorkflowState:
@@ -40,17 +70,23 @@ def run_afm_simulation(state: WorkflowState) -> WorkflowState:
 
         # Try to import ppafm with OpenCL support
         try:
-            from ppafm.io import loadXYZ
-            from ppafm.ml.AuxMap import (
-                AtomicDisks,
-                ESMapConstant,
-                HeightMap,
-                vdwSpheres,
-            )
-            from ppafm.ocl.AFMulator import AFMulator
+            # Suppress C++ compilation output during library import
+            _suppress_compilation_output()
+            try:
+                from ppafm.io import loadXYZ
+                from ppafm.ml.AuxMap import (
+                    AtomicDisks,
+                    ESMapConstant,
+                    HeightMap,
+                    vdwSpheres,
+                )
+                from ppafm.ocl.AFMulator import AFMulator
 
-            PPAFM_AVAILABLE = True
+                PPAFM_AVAILABLE = True
+            finally:
+                _restore_output()
         except (ImportError, OSError) as e:
+            _restore_output()  # Ensure output is restored even if exception occurs
             # ppafm or OpenCL not available
             logger.warning(f"ppafm not available or OpenCL not configured: {e}")
             PPAFM_AVAILABLE = False

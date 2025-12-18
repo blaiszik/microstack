@@ -1,6 +1,6 @@
 """LangGraph state definition for µ-Stack workflow."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -61,8 +61,14 @@ class WorkflowState(BaseModel):
     microscopy_requested: bool = Field(
         default=False, description="Whether microscopy simulation was requested"
     )
-    microscopy_type: Optional[str] = Field(
-        default=None, description="Type of microscopy to run (STM, AFM, IETS)"
+    microscopy_type: Optional[Union[str, List[str]]] = Field(
+        default=None, description="Type(s) of microscopy to run (STM, AFM, IETS, or list for sequential execution)"
+    )
+    microscopy_queue: List[str] = Field(
+        default_factory=list, description="Queue of remaining microscopy simulations to execute (in order)"
+    )
+    current_microscopy: Optional[str] = Field(
+        default=None, description="Currently executing microscopy type"
     )
     interactive_pause: bool = Field(
         default=False, description="Whether workflow should pause for user interaction"

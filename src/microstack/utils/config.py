@@ -98,7 +98,7 @@ def init_output_dirs():
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 # Log file path
-LOG_FILE = Path(os.environ.get("LOG_FILE", "./atomic.log"))
+LOG_FILE = Path(os.environ.get("LOG_FILE", "./microstack.log"))
 
 # Enable console logging
 LOG_TO_CONSOLE = os.environ.get("LOG_TO_CONSOLE", "True").lower() == "true"

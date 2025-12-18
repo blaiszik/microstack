@@ -12,6 +12,7 @@ from microstack.agents.structure_generator import (
 from microstack.agents.microscopy_router import (
     check_microscopy,
     route_microscopy,
+    check_next_microscopy,
 )
 
 # Import microscopy agents
@@ -61,6 +62,26 @@ def microscopy_check_node(state: WorkflowState) -> WorkflowState:
     return check_microscopy(state)
 
 
+def check_next_microscopy_node(state: WorkflowState) -> WorkflowState:
+    """Check if there are more microscopy simulations in the queue."""
+    return check_next_microscopy(state)
+
+
+def route_next_microscopy(state: WorkflowState) -> str:
+    """
+    Route to next microscopy agent or end workflow.
+    Called after each microscopy simulation completes.
+    """
+    if state.microscopy_requested and state.current_microscopy:
+        logger.info(
+            f"More microscopy simulations queued, routing to next: {state.current_microscopy}"
+        )
+        return "route_microscopy_next"
+    else:
+        logger.info("All microscopy simulations completed")
+        return "end"
+
+
 def stm_node(state: WorkflowState) -> WorkflowState:
     """Run STM simulation."""
     return run_stm_simulation(state)
@@ -80,6 +101,14 @@ def iets_node(state: WorkflowState) -> WorkflowState:
     from microstack.agents.microscopy.iets import run_iets_simulation
 
     return run_iets_simulation(state)
+
+
+def tem_node(state: WorkflowState) -> WorkflowState:
+    """Run TEM simulation."""
+    # Import here to avoid circular imports
+    from microstack.agents.microscopy.tem import run_tem_simulation
+
+    return run_tem_simulation(state)
 
 
 def create_workflow() -> StateGraph:
@@ -102,6 +131,8 @@ def create_workflow() -> StateGraph:
     workflow.add_node("stm_agent", stm_node)
     workflow.add_node("afm_agent", afm_node)
     workflow.add_node("iets_agent", iets_node)
+    workflow.add_node("tem_agent", tem_node)
+    workflow.add_node("check_next_microscopy", check_next_microscopy_node)
 
     # Set entry point
     workflow.set_entry_point("parse_query")
@@ -111,7 +142,7 @@ def create_workflow() -> StateGraph:
     workflow.add_edge("generate_structure", "relax_structure")
     workflow.add_edge("relax_structure", "check_microscopy")
 
-    # Conditional routing for microscopy
+    # Conditional routing for initial microscopy check
     workflow.add_conditional_edges(
         "check_microscopy",
         route_microscopy,
@@ -119,13 +150,24 @@ def create_workflow() -> StateGraph:
             "stm_agent": "stm_agent",
             "afm_agent": "afm_agent",
             "iets_agent": "iets_agent",
+            "tem_agent": "tem_agent",
             "end": END,
         },
     )
 
-    # All microscopy agents terminate
-    for agent in ["stm_agent", "afm_agent", "iets_agent"]:
-        workflow.add_edge(agent, END)
+    # All microscopy agents go to check_next_microscopy
+    for agent in ["stm_agent", "afm_agent", "iets_agent", "tem_agent"]:
+        workflow.add_edge(agent, "check_next_microscopy")
+
+    # Conditional routing after each microscopy simulation
+    workflow.add_conditional_edges(
+        "check_next_microscopy",
+        route_next_microscopy,
+        {
+            "route_microscopy_next": "check_microscopy",
+            "end": END,
+        },
+    )
 
     # Compile and return
     compiled_workflow = workflow.compile()
@@ -155,7 +197,7 @@ def run_workflow(query: str, session_id: str) -> WorkflowState:
 
     # Create and run workflow
     workflow = create_workflow()
-    final_state = workflow.invoke(initial_state)
+    final_state = workflow.invoke(initial_state, {"recursion_limit": 2500})
 
     # Ensure we return a WorkflowState object (LangGraph might return dict)
     if isinstance(final_state, dict):

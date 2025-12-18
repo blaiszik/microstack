@@ -12,6 +12,8 @@ Supported Microscopy Types (for Microscopy_Simulation):
 - AFM (Atomic Force Microscopy): For surface topography and force measurements
 - STM (Scanning Tunneling Microscopy): For atomic-resolution surface imaging
 - IETS (Inelastic Electron Tunneling Spectroscopy): For vibrational spectroscopy
+- TEM (Transmission Electron Microscopy): For multislice image simulation using abTEM
+- Multiple types: When user requests sequential simulations (e.g., "STM then IETS" or "TEM after relaxation"), return as a LIST in order of execution
 
 Material Specifications:
 - Chemical formula: e.g., "Si", "NaCl", "MoS2", "graphene"
@@ -38,7 +40,7 @@ All STM parameters use prefix "stm_{name}". Common ones include:
 - stm_z0: Initial z position for constant current scan
 - stm_sts_bias_start/end/step: STS sweep parameters (default -2.0 to +2.0 eV in 0.05 eV steps)
 - stm_sts_x, stm_sts_y: STS point position (default 0.0, 0.0)
-- stm_gpaw_mode: GPAW mode (pw, lcao, fd, default "pw")
+- stm_gpaw_mode: GPAW calculation mode ("lcao", "pw", "fd", etc.) - LCAO is required for IETS wavefunction data. Default "lcao"
 - stm_gpaw_kpts: K-point grid (default (4, 4, 1))
 - stm_gpaw_xc: Exchange-correlation (default "LDA")
 - stm_gpaw_h: Grid spacing in Å (default 0.2)
@@ -58,6 +60,29 @@ All AFM parameters use prefix "afm_{name}". Common ones include:
 - afm_f0_cantilever: Cantilever frequency in Hz (default 30300)
 - afm_k_cantilever: Cantilever stiffness in N/m (default 1800)
 Example: "AFM with scan_dim (256, 256, 40) and CO tip (iZPP=8)"
+
+Common TEM Parameters (abTEM):
+- Energy: Accelerating voltage in keV (typical 80-300 keV, default 200 keV)
+- Slice thickness: Multislice thickness in Angstrom (default 1.0)
+- Parametrization: Atomic form factor parametrization (lobato, peng, kirkland)
+- Detector type: "annular" for annular dark-field, "pixelated" for pixelated detector
+- Detector inner/outer: Detector collection angles in mrad
+
+Advanced TEM Parameters (abTEM):
+All TEM parameters use prefix "tem_{name}". Common ones include:
+- tem_energy: Accelerating voltage in keV (default 200)
+- tem_slice_thickness: Multislice thickness in Angstrom (default 1.0)
+- tem_parametrization: Form factor parametrization (lobato, peng, kirkland, default "lobato")
+- tem_projection: Projection type (infinite, finite, default "infinite")
+- tem_gpts: Grid points for potential (None = auto, default None)
+- tem_sampling: Pixel sampling rate in Angstrom⁻¹ (None = auto, default None)
+- tem_tilt_x, tem_tilt_y: Beam tilt in mrad (default 0.0)
+- tem_detector_type: Detector type (annular, pixelated, default "annular")
+- tem_detector_inner: Inner detection angle in mrad (default 0.0)
+- tem_detector_outer: Outer detection angle in mrad (None = use cutoff)
+- tem_normalize: Normalize plane wave (default False)
+- tem_device: Computation device (cpu, cuda, None = auto)
+Example: "TEM simulation with 200 keV, annular detector inner=50mrad outer=200mrad"
 
 Common IETS Parameters:
 - Energy range (meV): Typically 0-500 meV for molecular vibrations
@@ -195,6 +220,16 @@ Query: "STM simulation of Au(111) with bias=-0.8V, STS from -2.5 to +2.5 eV (ste
 - stm_use_density: false (user specified LDOS mode)
 - confidence: 0.95
 
+Query: "TEM simulation of Au nanoparticle with 200 keV energy, annular detector, inner=50mrad outer=200mrad"
+- task_type: "Microscopy_Simulation"
+- microscopy_type: "TEM"
+- material_formula: "Au"
+- tem_energy: 200.0 (user specified 200 keV)
+- tem_detector_type: "annular" (annular detector specified)
+- tem_detector_inner: 50.0 (inner detection angle)
+- tem_detector_outer: 200.0 (outer detection angle)
+- confidence: 0.95
+
 Query: "IETS simulation of relaxed Cu(100) surface using GPAW, sp orbitals, voltage=-1.0V, eta=0.05, grid x(0,20,0.2) y(0,15,0.2) z(10,12,0.05)"
 - task_type: "Microscopy_Simulation"
 - microscopy_type: "IETS"
@@ -207,6 +242,28 @@ Query: "IETS simulation of relaxed Cu(100) surface using GPAW, sp orbitals, volt
 - iets_y_range: [0.0, 15.0, 0.2] (user grid specification)
 - iets_z_range: [10.0, 12.0, 0.05] (user grid specification)
 - confidence: 0.95
+
+Query: "Relax 3x3x2 Al(111) surface and use the relaxed structure to do a STM microscopy simulation with 2V bias and 2A tip height. And finally do a IETS microscopy."
+- task_type: "SciLink_Structure_Generation" (primary: structure generation and relaxation)
+- material_formula: "Al"
+- supercell_x: 3
+- supercell_y: 3
+- supercell_z: 2 (inferred from "2-layer")
+- surface_miller_indices: [1, 1, 1]
+- relax: true (keyword "relax" present)
+- microscopy_type: ["STM", "IETS"] (CRITICAL: Return as LIST for multiple sequential simulations, in order mentioned)
+- bias_voltage: 2.0 (applies to STM)
+- tip_height: 2.0 (applies to STM)
+- confidence: 0.95
+
+CRITICAL: When user asks for multiple microscopy simulations sequentially (keywords: "and then", "then do", "finally do", "followed by", etc.), ALWAYS return microscopy_type as a LIST with types in execution order.
+
+CRITICAL: GPAW Mode Selection for STM/IETS:
+- If user specifies GPAW mode (lcao, pw, fd, etc.), extract it as stm_gpaw_mode
+- If user requests IETS microscopy without specifying GPAW mode, strongly prefer LCAO mode (required for wavefunction data)
+- LCAO mode is necessary for IETS to work - it generates wavefunction coefficients
+- If user specifies a different mode for STM when IETS is also requested, this is likely a conflict - flag in ambiguities
+- Keywords to watch for: "lcao", "plane-wave" or "pw", "finite-difference" or "fd"
 
 Be precise, flexible, and avoid making assumptions or filling in values unless explicitly stated by the user or if contextually obvious and necessary for the task. If unsure about anything, flag it in ambiguities and lower the confidence score. ALWAYS check for relaxation keywords and correctly parse the relax parameter. For microscopy parameters, always parse {microscopy_type}_{argument} notation (afm_*, iets_*, stm_*) and extract numerical values correctly.
 """
