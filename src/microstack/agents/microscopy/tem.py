@@ -9,6 +9,7 @@ from ase.io import read
 from microstack.agents.state import WorkflowState
 from microstack.utils.logging import get_logger
 from microstack.utils.settings import settings
+from microstack.io import save_tem_to_nsid, SIDPY_AVAILABLE
 
 logger = get_logger("agents.microscopy.tem")
 
@@ -83,6 +84,24 @@ def run_tem_simulation(state: WorkflowState) -> WorkflowState:
 
         np.save(str(npy_file), image_array)
 
+        # Export to NSID format if enabled
+        nsid_file = None
+        if getattr(settings, "export_nsid", True) and SIDPY_AVAILABLE:
+            try:
+                nsid_file = tem_dir / f"{formula}_tem.h5"
+                save_tem_to_nsid(
+                    filepath=nsid_file,
+                    image_data=image_array,
+                    sampling=getattr(settings, "tem_sampling", 0.1),
+                    energy=getattr(settings, "tem_energy", 200),
+                    metadata={"formula": formula},
+                )
+                logger.info(f"Saved NSID file: {nsid_file}")
+            except Exception as e:
+                logger.warning(f"NSID export failed: {e}")
+        elif getattr(settings, "export_nsid", True) and not SIDPY_AVAILABLE:
+            logger.warning("NSID export enabled but sidpy/pyNSID not installed")
+
         plt.figure(figsize=(8, 8))
         # Squeeze removes any singleton dimensions like (1, 256, 256)
         plt.imshow(image_array.squeeze(), cmap="gray", origin="lower")
@@ -96,6 +115,7 @@ def run_tem_simulation(state: WorkflowState) -> WorkflowState:
             "image_file": str(image_file),
             "data_file": str(npy_file),
             "image_shape": list(image_array.shape),
+            "nsid_file": str(nsid_file) if nsid_file else None,
         }
         state.file_paths["microscopy"] = str(tem_dir)
 

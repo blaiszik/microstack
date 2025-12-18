@@ -9,6 +9,7 @@ from io import StringIO
 from microstack.agents.state import WorkflowState
 from microstack.utils.logging import get_logger
 from microstack.utils.settings import settings
+from microstack.io import save_iets_to_nsid, SIDPY_AVAILABLE
 
 logger = get_logger("agents.microscopy.iets")
 
@@ -255,6 +256,35 @@ def run_iets_simulation(state: WorkflowState) -> WorkflowState:
                     np.save(str(iets_file), iets_result)
                     logger.info(f"Saved IETS results to {iets_file}")
 
+                # Export to NSID format if enabled
+                nsid_file = None
+                if getattr(settings, "export_nsid", True) and SIDPY_AVAILABLE:
+                    try:
+                        nsid_file = iets_dir / "iets_results.h5"
+                        save_iets_to_nsid(
+                            filepath=nsid_file,
+                            iets_data=iets_result,
+                            x_range=x_range,
+                            y_range=y_range,
+                            z_range=z_range,
+                            metadata={
+                                "voltage": float(voltage),
+                                "eta": float(eta),
+                                "sample_orbs": sample_orbs,
+                                "orbital_coefficients": {
+                                    "s": float(s_orbital),
+                                    "px": float(px_orbital),
+                                    "py": float(py_orbital),
+                                    "pz": float(pz_orbital),
+                                },
+                            },
+                        )
+                        logger.info(f"Saved NSID file: {nsid_file}")
+                    except Exception as e:
+                        logger.warning(f"NSID export failed: {e}")
+                elif getattr(settings, "export_nsid", True) and not SIDPY_AVAILABLE:
+                    logger.warning("NSID export enabled but sidpy/pyNSID not installed")
+
                 state.microscopy_results["iets"] = {
                     "voltage": float(voltage),
                     "eta": float(eta),
@@ -273,6 +303,7 @@ def run_iets_simulation(state: WorkflowState) -> WorkflowState:
                     },
                     "results_file": str(iets_file),
                     "method": "IETS_simple",
+                    "nsid_file": str(nsid_file) if nsid_file else None,
                 }
             else:
                 logger.warning("Skipping IETS calculation (GPAW file not found)")

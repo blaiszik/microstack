@@ -23,6 +23,7 @@ except ImportError:
 from microstack.agents.state import WorkflowState
 from microstack.utils.logging import get_logger
 from microstack.utils.settings import settings
+from microstack.io import save_stm_to_nsid, SIDPY_AVAILABLE
 
 logger = get_logger("agents.microscopy.stm")
 
@@ -234,9 +235,37 @@ def run_stm_simulation(state: WorkflowState) -> WorkflowState:
             plt.close()
 
             logger.info(f"Saved STS spectrum: {sts_file}")
+            sts_data_tuple = (bias, I, dIdV)
         except Exception as e:
             logger.warning(f"STS calculation failed: {e}")
             state.add_warning(f"STS failed: {str(e)}")
+            sts_data_tuple = None
+
+        # Export to NSID format if enabled
+        nsid_file = None
+        if getattr(settings, "export_nsid", True) and SIDPY_AVAILABLE:
+            try:
+                nsid_file = stm_dir / f"{formula}_stm.h5"
+                save_stm_to_nsid(
+                    filepath=nsid_file,
+                    constant_current_data=(x, y, h),
+                    constant_height_data=(x, y, I),
+                    sts_data=sts_data_tuple,
+                    metadata={
+                        "bias_voltage": float(bias_voltage),
+                        "tip_height": float(tip_height),
+                        "formula": formula,
+                        "symmetries": symmetries,
+                        "gpaw_mode": gpaw_mode,
+                        "gpaw_xc": gpaw_xc,
+                    },
+                )
+                logger.info(f"Saved NSID file: {nsid_file}")
+            except Exception as e:
+                logger.warning(f"NSID export failed: {e}")
+                state.add_warning(f"NSID export failed: {str(e)}")
+        elif getattr(settings, "export_nsid", True) and not SIDPY_AVAILABLE:
+            logger.warning("NSID export enabled but sidpy/pyNSID not installed")
 
         # Store comprehensive STM results with all parameters
         state.microscopy_results["stm"] = {
@@ -260,6 +289,7 @@ def run_stm_simulation(state: WorkflowState) -> WorkflowState:
                 "h": float(gpaw_h),
             },
             "gpaw_file": str(gpw_file),
+            "nsid_file": str(nsid_file) if nsid_file else None,
         }
 
         state.file_paths["microscopy"] = str(stm_dir)

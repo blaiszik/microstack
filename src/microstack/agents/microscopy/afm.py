@@ -11,6 +11,7 @@ from io import StringIO
 from microstack.agents.state import WorkflowState
 from microstack.utils.logging import get_logger
 from microstack.utils.settings import settings
+from microstack.io import save_afm_to_nsid, SIDPY_AVAILABLE
 
 logger = get_logger("agents.microscopy.afm")
 
@@ -314,11 +315,40 @@ def run_afm_simulation(state: WorkflowState) -> WorkflowState:
 
             logger.info(f"Saved AFM auxiliary maps: {afm_file}")
 
+            # Export to NSID format if enabled
+            nsid_file = None
+            if getattr(settings, "export_nsid", True) and SIDPY_AVAILABLE:
+                try:
+                    nsid_file = afm_dir / f"{formula}_afm.h5"
+                    save_afm_to_nsid(
+                        filepath=nsid_file,
+                        afm_image=afm[:, :, -1].T,  # Last z-slice, transposed
+                        height_map=y_height.T,
+                        vdw_spheres=y_spheres.T,
+                        atomic_disks=y_disks.T,
+                        es_map=y_es.T,
+                        scan_window=(scan_window_min[:2], scan_window_max[:2]),
+                        metadata={
+                            "tip_height": float(tip_height),
+                            "formula": formula,
+                            "pix_per_angstrome": pix_per_angstrome,
+                            "i_zpp": i_zpp,
+                            "sigma": float(sigma),
+                        },
+                    )
+                    logger.info(f"Saved NSID file: {nsid_file}")
+                except Exception as e:
+                    logger.warning(f"NSID export failed: {e}")
+                    state.add_warning(f"NSID export failed: {str(e)}")
+            elif getattr(settings, "export_nsid", True) and not SIDPY_AVAILABLE:
+                logger.warning("NSID export enabled but sidpy/pyNSID not installed")
+
             # Store results
             state.microscopy_results["afm"] = {
                 "tip_height": tip_height,
                 "scan_size": scan_size,
                 "auxmaps_file": str(afm_file),
+                "nsid_file": str(nsid_file) if nsid_file else None,
             }
 
             state.file_paths["microscopy"] = str(afm_dir)
