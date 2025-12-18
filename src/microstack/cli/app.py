@@ -440,6 +440,64 @@ def simulate(query: str) -> None:
         sys.exit(1)
 
 
+@cli.command()
+@click.option("--port", default=8000, help="Backend port")
+@click.option("--host", default="0.0.0.0", help="Backend host")
+@click.option("--frontend/--no-frontend", default=True, help="Also start frontend dev server")
+def web(port: int, host: str, frontend: bool) -> None:
+    """
+    Start the µ-Stack Web UI (FastAPI + React).
+    """
+    import uvicorn
+    import subprocess
+    import threading
+    import time
+    import platform
+    from pathlib import Path
+    from microstack.web.api import app
+
+    console.print(f"\n[bold cyan]Starting µ-Stack Web Interface (WSL/Linux Mode)[/bold cyan]\n")
+    
+    # Start frontend if requested
+    if frontend:
+        frontend_dir = Path(__file__).parent.parent.parent.parent / "frontend"
+        if (frontend_dir / "package.json").exists():
+            console.print(f"[yellow]Starting React frontend (Vite)...[/yellow]")
+            
+            # Check if node_modules exists
+            if not (frontend_dir / "node_modules").exists():
+                console.print(f"[yellow]node_modules not found, running npm install...[/yellow]")
+                subprocess.run(["npm", "install"], cwd=str(frontend_dir), shell=True)
+
+            def run_frontend():
+                try:
+                    # In WSL, we MUST bind to 0.0.0.0 for Windows browser access via localhost
+                    subprocess.run(
+                        "npm run dev -- --host 0.0.0.0", 
+                        cwd=str(frontend_dir), 
+                        shell=True
+                    )
+                except Exception as e:
+                    console.print(f"[red]Failed to start frontend: {e}[/red]")
+
+            thread = threading.Thread(target=run_frontend, daemon=True)
+            thread.start()
+            
+            # Give it a second to start
+            time.sleep(2)
+            console.print(f"[green]✓[/green] Frontend (Internal): [bold]http://0.0.0.0:5173[/bold]")
+        else:
+            console.print(f"[yellow]Frontend directory not found at {frontend_dir}. Skipping frontend startup.[/yellow]")
+
+    console.print(f"[yellow]Starting FastAPI backend on {host}:{port}...[/yellow]")
+    console.print(f"[green]✓[/green] Backend API: [bold]http://{host}:{port}[/bold]")
+    console.print(f"\n[bold green]ACCESS FROM WINDOWS:[/bold green]")
+    console.print(f"Open [bold blue]http://localhost:5173[/bold blue] in your Windows browser.")
+    console.print(f"The backend is available to the UI at [bold]http://localhost:{port}[/bold]\n")
+    
+    uvicorn.run(app, host=host, port=port)
+
+
 @cli.command("check-config")
 def check_config() -> None:
     """

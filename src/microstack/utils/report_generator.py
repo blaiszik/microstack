@@ -57,64 +57,29 @@ def generate_task_summary(state: "WorkflowState") -> str:  # noqa: F821
     """
     summary_lines = []
 
-    # Query and AI Agent
-    summary_lines.append(f"**User Query**: {state.query}")
-    summary_lines.append("")
-    summary_lines.append(
-        f"**AI Agent**: {detect_ai_agent(state.parsed_params)}"
-    )
-    summary_lines.append("")
-
     # Completed Tasks
-    completed_tasks = []
-
-    # Structure Generation
     if state.structure_info:
         element = state.structure_info.get("element", "Unknown")
         face = state.structure_info.get("face", "Unknown")
         formula = state.structure_info.get("formula", "Unknown")
         num_atoms = state.structure_info.get("num_atoms", 0)
+        summary_lines.append(f"- **Structure Generation**: ✓ {element}({face}) - {formula} ({num_atoms} atoms)")
 
-        completed_tasks.append(
-            f"✓ **Structure Generation**: {element}({face}) - {formula} ({num_atoms} atoms)"
-        )
-
-    # Relaxation
     if state.relaxation_results:
         energy_change = state.relaxation_results.get("energy_change", 0)
-        initial_energy = state.relaxation_results.get("initial_energy", 0)
-        final_energy = state.relaxation_results.get("final_energy", 0)
+        summary_lines.append(f"- **Structure Relaxation**: ✓ ΔE = {energy_change:.4f} eV")
 
-        completed_tasks.append(
-            f"✓ **Structure Relaxation**: ΔE = {energy_change:.4f} eV "
-            f"({initial_energy:.4f} → {final_energy:.4f} eV)"
-        )
-
-    # Microscopy Simulations
     if state.microscopy_results:
         for micro_type, results in state.microscopy_results.items():
             if isinstance(results, dict) and results:
-                completed_tasks.append(f"✓ **{micro_type.upper()} Simulation**: Complete")
-
-    if completed_tasks:
-        summary_lines.append("**Completed Tasks**:")
-        summary_lines.append("")
-        for task in completed_tasks:
-            summary_lines.append(f"  {task}")
-        summary_lines.append("")
+                summary_lines.append(f"- **{micro_type.upper()} Simulation**: ✓ Complete")
 
     # Errors and Warnings
     if state.errors:
-        summary_lines.append(f"⚠️ **Errors ({len(state.errors)}):**")
-        for error in state.errors:
-            summary_lines.append(f"  - {error}")
-        summary_lines.append("")
+        summary_lines.append(f"- ⚠️ **Errors ({len(state.errors)})**")
 
     if state.warnings:
-        summary_lines.append(f"⚠️ **Warnings ({len(state.warnings)}):**")
-        for warning in state.warnings:
-            summary_lines.append(f"  - {warning}")
-        summary_lines.append("")
+        summary_lines.append(f"- ⚠️ **Warnings ({len(state.warnings)})**")
 
     return "\n".join(summary_lines)
 
@@ -129,12 +94,10 @@ def generate_structure_section(state: "WorkflowState") -> Optional[str]:  # noqa
     lines.append("")
 
     struct_info = state.structure_info
-    lines.append("| Property | Value |")
-    lines.append("|----------|-------|")
-    lines.append(f"| Element | {struct_info.get('element', 'N/A')} |")
-    lines.append(f"| Surface Face | {struct_info.get('face', 'N/A')} |")
-    lines.append(f"| Chemical Formula | {struct_info.get('formula', 'N/A')} |")
-    lines.append(f"| Number of Atoms | {struct_info.get('num_atoms', 'N/A')} |")
+    lines.append(f"**Element**: {struct_info.get('element', 'N/A')}")
+    lines.append(f"**Surface Face**: {struct_info.get('face', 'N/A')}")
+    lines.append(f"**Chemical Formula**: {struct_info.get('formula', 'N/A')}")
+    lines.append(f"**Number of Atoms**: {struct_info.get('num_atoms', 'N/A')}")
     lines.append("")
 
     if state.file_paths.get("unrelaxed_xyz"):
@@ -154,13 +117,9 @@ def generate_relaxation_section(state: "WorkflowState") -> Optional[str]:  # noq
     lines.append("")
 
     relax = state.relaxation_results
-    lines.append("### Energy")
-    lines.append("")
-    lines.append("| State | Energy (eV) |")
-    lines.append("|-------|-------------|")
-    lines.append(f"| Initial (unrelaxed) | {relax.get('initial_energy', 0):.4f} |")
-    lines.append(f"| Final (relaxed) | {relax.get('final_energy', 0):.4f} |")
-    lines.append(f"| **Change** | **{relax.get('energy_change', 0):.4f}** |")
+    lines.append(f"**Initial Energy**: {relax.get('initial_energy', 0):.4f} eV")
+    lines.append(f"**Final Energy**: {relax.get('final_energy', 0):.4f} eV")
+    lines.append(f"**Total Change**: {relax.get('energy_change', 0):.4f} eV")
     lines.append("")
 
     if state.file_paths.get("relaxed_xyz"):
@@ -238,40 +197,26 @@ def generate_full_report(
     lines.append(f"# {title}")
     lines.append("")
     lines.append(f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
-    lines.append(f"*Session ID: {state.session_id}*")
     lines.append("")
 
     # Summary Section
     lines.append("## Summary")
     lines.append("")
-    lines.append(generate_task_summary(state))
+    summary = generate_task_summary(state)
+    # Remove bullet points from summary
+    summary = summary.replace("- **", "**").replace("✓ ", "✓ ")
+    lines.append(summary)
     lines.append("")
 
-    # Detailed Sections
-    structure_section = generate_structure_section(state)
-    if structure_section:
-        lines.append(structure_section)
-        lines.append("")
-
-    relaxation_section = generate_relaxation_section(state)
-    if relaxation_section:
-        lines.append(relaxation_section)
-        lines.append("")
-
-    microscopy_section = generate_microscopy_section(state)
-    if microscopy_section:
-        lines.append(microscopy_section)
-        lines.append("")
+    # ... existing sections ...
 
     # Metadata
     lines.append("## Workflow Information")
     lines.append("")
-    lines.append("| Property | Value |")
-    lines.append("|----------|-------|")
-    lines.append(f"| Session ID | `{state.session_id}` |")
-    lines.append(f"| Started | {state.timestamp.strftime('%Y-%m-%d %H:%M:%S')} |")
-    lines.append(f"| Final Stage | {state.workflow_stage} |")
-    lines.append(f"| AI Agent | {detect_ai_agent(state.parsed_params)} |")
+    lines.append(f"**Session ID**: `{state.session_id}`")
+    lines.append(f"**Started**: {state.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"**Final Stage**: {state.workflow_stage}")
+    lines.append(f"**AI Agent**: {detect_ai_agent(state.parsed_params)}")
     lines.append("")
 
     # Errors/Warnings Summary

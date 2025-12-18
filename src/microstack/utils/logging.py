@@ -38,7 +38,7 @@ def setup_logging(
     log_to_file = log_to_file if log_to_file is not None else config.LOG_TO_FILE
 
     # Create logger
-    logger = logging.getLogger("atomic")
+    logger = logging.getLogger("microstack")
     logger.setLevel(getattr(logging, log_level.upper()))
 
     # Remove existing handlers to avoid duplicates
