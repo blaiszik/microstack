@@ -213,3 +213,9 @@ __marimo__/
 
 # Output files
 output
+
+# XYZ structure files
+*.xyz
+
+# Scilink structures output
+atomic_output/scilink_structures/
