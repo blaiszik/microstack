@@ -3,12 +3,18 @@
 import os
 import sys
 import warnings
+import logging
 import uuid
 
 # Suppress warnings before other imports
 warnings.filterwarnings("ignore")
 os.environ["PYTHONWARNINGS"] = "ignore"
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
+
+# Suppress verbose logging from external packages
+logging.getLogger("scilink").setLevel(logging.WARNING)
+logging.getLogger("root").setLevel(logging.WARNING)
+logging.getLogger("edison_client").setLevel(logging.WARNING)
 
 import click
 from rich.console import Console
@@ -190,7 +196,7 @@ def relax(element: str, face: str, relax: bool, steps: int, output_dir: str) -> 
     except Exception as e:
         # Print error without markup to avoid Rich parsing issues
         console.print("\n[bold red]✗ Error:[/bold red]")
-        console.print(str(e), style="red", markup=False)
+        console.print(str(e), style="red")
         console.print()
         logger.error(f"Relaxation workflow failed: {e}", exc_info=True)
         sys.exit(1)
@@ -198,61 +204,209 @@ def relax(element: str, face: str, relax: bool, steps: int, output_dir: str) -> 
 
 @cli.command()
 @click.argument("query", type=str)
-def query(query: str) -> None:
+@click.option(
+    "--relax/--no-relax", default=True, help="Relax surface structure (default: yes)"
+)
+def query(query: str, relax: bool) -> None:
     """
-    Parse a natural language query for microscopy simulation.
+    Generate structure via SciLink and relax using MACE.
 
-    This command uses the configured LLM agent (Anthropic or DeepSeek) to
-    parse and understand microscopy simulation requests.
-
-    Examples:
-        atomic query "Generate TEM image for Si with 300 kV"
-        atomic query "AFM scan of NaCl surface"
-        atomic query "STM image of graphene"
+    Example: atomic query "3x3x4 Cu(111) surface with 15A vacuum"
     """
-    console.print(f"\n[bold cyan]Query:[/bold cyan] {query}\n")
+    import scilink as sl
+    from pathlib import Path
+    from ase.io import write
+    from atomic_materials.relaxation.surface_relaxation import (
+        load_model,
+        relax_surfaces,
+        plot_surface_relaxation,
+    )
+
+    console.print(f"\n[bold cyan]SciLink Agent Input:[/bold cyan] {query}\n")
 
     try:
-        # Check LLM configuration
-        if config.LLM_AGENT == "anthropic" and not config.ANTHROPIC_API_KEY:
-            console.print("[bold red]✗ Anthropic API key not configured[/bold red]")
-            console.print(
-                "Set ANTHROPIC_API_KEY environment variable or in config.py\n"
+        # 1. Setup Task ID and Directories (UUID integration)
+        task_id = str(uuid.uuid4())[:8]
+        config.init_output_dirs()
+
+        # Determine output path using app logic
+        output_base = Path(config.OUTPUT_SUBDIRS["relaxation"])
+        output_path = output_base / f"query_{task_id}"
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # 2. SciLink Structure Generation
+        engine = sl.Interface("ase")
+        with console.status(
+            "[yellow]SciLink is architecting the atoms...[/yellow]", spinner="dots"
+        ):
+            # Prompt engineering to ensure variable 'atoms' is created
+            prompt = (
+                f"Using ASE build functions, {query}. Store result in 'atoms' variable."
             )
-            sys.exit(1)
-        elif config.LLM_AGENT == "deepseek" and not config.DEEPSEEK_API_KEY:
-            console.print("[bold red]✗ DeepSeek API key not configured[/bold red]")
-            console.print("Set DEEPSEEK_API_KEY environment variable or in config.py\n")
-            sys.exit(1)
+            result = engine.run(prompt)
+            atoms = result.get("atoms")
 
-        console.print(
-            f"[yellow]Parsing query with {config.LLM_AGENT.upper()}...[/yellow]"
-        )
+        if not atoms:
+            raise ValueError("SciLink failed to generate an ASE Atoms object.")
 
-        # TODO: Implement LLM query parsing
-        # For now, show placeholder
-        console.print(
-            "[yellow]⚠ LLM query parsing not yet integrated in CLI mode.[/yellow]"
-        )
-        console.print(
-            "[dim]Use interactive mode instead: `atomic` or `atomic interactive`[/dim]\n"
-        )
+        # Save the initial unrelaxed structure
+        formula = atoms.get_chemical_formula()
+        unrelaxed_file = output_path / f"{formula}_unrelaxed.xyz"
+        write(str(unrelaxed_file), atoms)
+        console.print(f"[green]✓[/green] Generated {formula} with {len(atoms)} atoms")
 
-        console.print("\n[bold yellow]📋 What this will do:[/bold yellow]")
-        console.print("  1. Parse query with LLM to extract parameters")
-        console.print("  2. Show parsed parameters in a table")
-        console.print("  3. Generate/retrieve structure")
-        console.print("  4. Optional: Relax structure with MACE")
-        console.print("  5. Run microscopy simulation")
-        console.print("  6. Save results to output folder")
-        console.print("\n[dim]Coming soon![/dim]\n")
+        # 3. MACE Relaxation Pipeline
+        if relax:
+            with console.status(
+                "[yellow]Loading MACE & Relaxing...[/yellow]", spinner="dots"
+            ):
+                model = load_model()
+                # Batch size of 1
+                relaxed_surfaces, init_e, final_e = relax_surfaces([atoms], model)
+                relaxed_atoms = relaxed_surfaces[0]
+
+            # Save Relaxed Structure
+            relaxed_file = output_path / f"{formula}_relaxed.xyz"
+            write(str(relaxed_file), relaxed_atoms)
+
+            # Generate Visualization (Matching the relax command style)
+            viz_file = output_path / f"{formula}_relaxation.png"
+            plot_surface_relaxation(
+                [atoms], [relaxed_atoms], [f"Query: {formula}"], filename=str(viz_file)
+            )
+
+            # 4. Success Summary Table
+            res_table = Table(show_header=True, header_style="bold magenta")
+            res_table.add_column("Property", style="cyan")
+            res_table.add_column("Value", style="green")
+            res_table.add_row("Task ID", task_id)
+            res_table.add_row("Energy Change", f"{final_e[0] - init_e[0]:.4f} eV")
+            res_table.add_row("Output Dir", str(output_path))
+
+            console.print(res_table)
+            console.print(f"\n[bold green]✓ Files saved to:[/bold green] {output_path}")
 
     except Exception as e:
-        # Print error without markup to avoid Rich parsing issues
-        console.print("\n[bold red]✗ Error:[/bold red]")
-        console.print(str(e), style="red", markup=False)
+        console.print(f"\n[bold red]✗ Query Workflow Failed:[/bold red] {e}")
+        logger.error(f"SciLink query failed: {e}", exc_info=True)
+
+
+@cli.command()
+@click.argument("query", type=str)
+def simulate(query: str) -> None:
+    """
+    Run complete simulation workflow from natural language query.
+
+    Uses LLM-powered parsing for structure generation and optional microscopy.
+
+    Examples:
+        atomic simulate "Build a 3x3x4 Cu(111) surface with 15A vacuum"
+        atomic simulate "Generate Pt(111), relax it, then run STM"
+        atomic simulate "Create graphene (001) with 10A vacuum and run AFM"
+    """
+    from atomic_materials.agents.workflow import run_workflow
+    from rich.table import Table
+
+    console.print(f"\n[bold cyan]ATOMIC Simulation Workflow[/bold cyan]\n")
+    console.print(f"[cyan]Query:[/cyan] {query}\n")
+
+    # Create session ID
+    session_id = str(uuid.uuid4())[:8]
+
+    try:
+        # Run workflow
+        with console.status(
+            "[yellow]Running LangGraph workflow...[/yellow]", spinner="dots"
+        ):
+            final_state = run_workflow(query, session_id)
+
+        # Display results
         console.print()
-        logger.error(f"Query processing failed: {e}", exc_info=True)
+
+        # Check for errors
+        if final_state.has_errors():
+            console.print("[bold red]✗ Workflow completed with errors:[/bold red]")
+            for error in final_state.errors:
+                console.print(f"  [red]• {error}[/red]")
+            console.print()
+
+        # Success message
+        if not final_state.has_errors():
+            console.print("[bold green]✓ Workflow completed successfully![/bold green]")
+        else:
+            console.print(
+                "[bold yellow]⚠ Workflow completed with warnings[/bold yellow]"
+            )
+
+        console.print()
+
+        # Summary table
+        summary_table = Table(
+            title="[cyan]Simulation Summary[/cyan]",
+            show_header=True,
+            header_style="bold magenta",
+        )
+        summary_table.add_column("Property", style="cyan", width=25)
+        summary_table.add_column("Value", style="green")
+
+        summary_table.add_row("Session ID", final_state.session_id)
+        summary_table.add_row("Stage", final_state.workflow_stage)
+
+        if final_state.structure_info:
+            summary_table.add_row(
+                "Formula", final_state.structure_info.get("formula", "N/A")
+            )
+            summary_table.add_row(
+                "Atoms", str(final_state.structure_info.get("num_atoms", "N/A"))
+            )
+
+        if final_state.relaxation_results:
+            init_e = final_state.relaxation_results.get("initial_energy")
+            final_e = final_state.relaxation_results.get("final_energy")
+            if init_e is not None and final_e is not None:
+                summary_table.add_row("Initial Energy", f"{init_e:.4f} eV")
+                summary_table.add_row("Final Energy", f"{final_e:.4f} eV")
+                summary_table.add_row("Energy Change", f"{final_e - init_e:.4f} eV")
+
+        if final_state.microscopy_type:
+            summary_table.add_row("Microscopy Type", final_state.microscopy_type)
+
+        console.print(summary_table)
+        console.print()
+
+        # Output files
+        if final_state.file_paths:
+            console.print("[bold]Output Files:[/bold]")
+            for key, path in final_state.file_paths.items():
+                if path and key != "output_dir":
+                    console.print(f"  [green]✓[/green] {key}: {path}")
+
+        # Warnings
+        if final_state.warnings:
+            console.print()
+            console.print("[yellow]⚠ Warnings:[/yellow]")
+            for warning in final_state.warnings:
+                console.print(f"  [yellow]•[/yellow] {warning}")
+
+        # Microscopy results
+        if final_state.microscopy_results:
+            console.print()
+            console.print("[bold cyan]Microscopy Results:[/bold cyan]")
+            for microscopy_type, results in final_state.microscopy_results.items():
+                console.print(f"  [cyan]{microscopy_type.upper()}:[/cyan]")
+                for key, value in results.items():
+                    if key.endswith("_file") or key.endswith("_dir"):
+                        console.print(f"    {key}: {value}")
+                    else:
+                        console.print(f"    {key}: {value}")
+
+        console.print()
+
+    except Exception as e:
+        console.print(f"\n[bold red]✗ Simulation Failed:[/bold red]")
+        console.print(str(e), style="red")
+        console.print()
+        logger.error(f"Simulation workflow failed: {e}", exc_info=True)
         sys.exit(1)
 
 
@@ -378,7 +532,7 @@ def main() -> None:
     except Exception as e:
         # Print error without markup to avoid Rich parsing issues
         console.print("\n[red]Fatal error:[/red]")
-        console.print(str(e), style="red", markup=False)
+        console.print(str(e), style="red")
         logger.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)
 

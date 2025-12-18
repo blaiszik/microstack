@@ -3,6 +3,7 @@
 import os
 import sys
 import warnings
+import logging
 import uuid
 from typing import Optional, Dict, Any
 
@@ -10,6 +11,11 @@ from typing import Optional, Dict, Any
 warnings.filterwarnings("ignore")
 os.environ["PYTHONWARNINGS"] = "ignore"
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
+
+# Suppress verbose logging from external packages
+logging.getLogger("scilink").setLevel(logging.WARNING)
+logging.getLogger("root").setLevel(logging.WARNING)
+logging.getLogger("edison_client").setLevel(logging.WARNING)
 
 from rich.console import Console
 from rich.panel import Panel
@@ -47,7 +53,7 @@ def parse_user_input(user_input: str) -> Dict[str, Any]:
 
     known_elements = config.SUPPORTED_METALS + [e.lower() for e in config.SUPPORTED_2D]
     known_faces = config.SUPPORTED_FACES
-    microscopy_types = ["tem", "afm", "stm", "iets", "ters"]
+    microscopy_types = ["afm", "stm", "iets"]
 
     params = {
         "action": None,  # "relax", "generate", "microscopy", "analyze"
@@ -336,12 +342,87 @@ def run_analysis_workflow(element: str, face: str) -> Dict[str, Any]:
     }
 
 
+def _display_workflow_results(final_state):
+    """Display results from completed workflow."""
+    # Check for errors
+    if final_state.has_errors():
+        console.print("[bold red]✗ Workflow encountered errors:[/bold red]")
+        for error in final_state.errors:
+            console.print(f"  [red]• {error}[/red]")
+        return
+
+    # Show success
+    console.print("[bold green]✓ Workflow completed successfully![/bold green]")
+    console.print()
+
+    # Summary table
+    summary_table = Table(
+        title="[cyan]Workflow Summary[/cyan]",
+        show_header=True,
+        header_style="bold magenta",
+    )
+    summary_table.add_column("Property", style="cyan", width=25)
+    summary_table.add_column("Value", style="green")
+
+    summary_table.add_row("Session ID", final_state.session_id)
+    summary_table.add_row("Stage", final_state.workflow_stage)
+
+    if final_state.structure_info:
+        summary_table.add_row(
+            "Formula", final_state.structure_info.get("formula", "N/A")
+        )
+        summary_table.add_row(
+            "Atoms", str(final_state.structure_info.get("num_atoms", "N/A"))
+        )
+
+    if final_state.relaxation_results:
+        init_e = final_state.relaxation_results.get("initial_energy")
+        final_e = final_state.relaxation_results.get("final_energy")
+        if init_e and final_e:
+            summary_table.add_row("Initial Energy", f"{init_e:.4f} eV")
+            summary_table.add_row("Final Energy", f"{final_e:.4f} eV")
+            summary_table.add_row("Energy Change", f"{final_e - init_e:.4f} eV")
+
+    if final_state.microscopy_type:
+        summary_table.add_row("Microscopy Type", final_state.microscopy_type)
+
+    console.print(summary_table)
+    console.print()
+
+    # Output files
+    if final_state.file_paths:
+        console.print("[bold]Output Files:[/bold]")
+        for key, path in final_state.file_paths.items():
+            if path and key != "output_dir":
+                console.print(f"  [green]✓[/green] {key}: {path}")
+
+    # Warnings
+    if final_state.warnings:
+        console.print()
+        console.print("[yellow]⚠ Warnings:[/yellow]")
+        for warning in final_state.warnings:
+            console.print(f"  [yellow]•[/yellow] {warning}")
+
+    # Microscopy results
+    if final_state.microscopy_results:
+        console.print()
+        console.print("[bold cyan]Microscopy Results:[/bold cyan]")
+        for microscopy_type, results in final_state.microscopy_results.items():
+            console.print(f"  [cyan]{microscopy_type.upper()}:[/cyan]")
+            for key, value in results.items():
+                if key.endswith("_file") or key.endswith("_dir"):
+                    console.print(f"    {key}: {value}")
+                else:
+                    console.print(f"    {key}: {value}")
+
+
 def run_interactive():
     """Run the interactive chat interface."""
     from atomic_materials.utils.gpu_detection import (
         get_torch_device,
         get_gpu_memory_info,
     )
+    from atomic_materials.agents.workflow import run_workflow
 
     print_logo()
 
@@ -376,14 +457,20 @@ def run_interactive():
         console.print(f"[cyan]GPU Memory:[/cyan] CPU mode")
 
     console.print()
-    console.print("I can analyze atomic surfaces using ML potentials (MACE-MP).")
+    console.print(
+        "I can generate atomic structures and analyze them with microscopy simulations!"
+    )
     console.print()
     console.print("[yellow]Try:[/yellow]")
     console.print(
-        "  • [cyan]analyze Cu 100[/cyan] - Full analysis with AI-generated report"
+        "  • [cyan]Build a 3x3x4 Cu(111) surface with 15A vacuum[/cyan] - SciLink structure generation"
     )
-    console.print("  • [cyan]relax Pt 111[/cyan] - Quick relaxation without report")
-    console.print("  • [cyan]generate graphene[/cyan] - Just create the structure")
+    console.print(
+        "  • [cyan]Generate graphene (001) with 10A vacuum, then STM[/cyan] - Structure + microscopy"
+    )
+    console.print(
+        "  • [cyan]Relax Cu 100[/cyan] - Simple surface generation and relaxation"
+    )
     console.print()
     console.print("[dim]Type 'quit' or 'exit' to leave.[/dim]")
     console.print()
@@ -407,137 +494,19 @@ def run_interactive():
             if not user_input.strip():
                 continue
 
-            console.print("[dim]Processing...[/dim]")
+            # Create session
+            session_id = str(uuid.uuid4())[:8]
 
-            # Parse input
-            params = parse_user_input(user_input)
+            with console.status(
+                "[yellow]Processing query with LLM...[/yellow]", spinner="dots"
+            ):
+                # Run the LangGraph workflow
+                final_state = run_workflow(user_input, session_id)
 
-            # If action is not determined or requires LLM
-            if not params["element"] or params["use_llm"]:
-                if config.LLM_AGENT in ["anthropic", "deepseek"]:
-                    console.print(
-                        f"[yellow]Using {config.LLM_AGENT.upper()} to parse query...[/yellow]"
-                    )
-                    console.print(
-                        "[dim]LLM parsing not yet integrated in interactive mode[/dim]"
-                    )
-                    console.print(
-                        "[dim]Please use direct commands like 'relax Cu 100'[/dim]\n"
-                    )
-                    continue
-                else:
-                    console.print("[yellow]⚠ I didn't understand the query.[/yellow]")
-                    console.print(
-                        "[dim]Try: 'relax Cu 100' or 'generate Pt 111'[/dim]\n"
-                    )
-                    continue
-
-            # Show parsed parameters
-            show_parameters(params)
-
-            # Ask for confirmation
-            proceed = Prompt.ask(
-                "[yellow]Proceed?[/yellow]",
-                choices=["yes", "no", "y", "n"],
-                default="yes",
-            )
-
-            if proceed.lower() not in ["yes", "y"]:
-                console.print("[dim]Cancelled.[/dim]\n")
-                continue
-
-            # Execute workflow
+            # Display results
             console.print()
-            try:
-                if params["action"] in ["relax", "generate"]:
-                    results = run_relaxation_workflow(
-                        params["element"], params["face"], params["relax"]
-                    )
-
-                    # Show results
-                    console.print("\n[bold green]✓ Workflow complete![/bold green]\n")
-
-                    # Results table
-                    results_table = Table(
-                        title="Results", show_header=True, header_style="bold magenta"
-                    )
-                    results_table.add_column("Property", style="cyan", width=25)
-                    results_table.add_column("Value", style="green")
-
-                    results_table.add_row("Number of Atoms", str(results["num_atoms"]))
-
-                    if params["relax"] and results["energy_change"]:
-                        results_table.add_row(
-                            "Initial Energy", f"{results['initial_energy']:.4f} eV"
-                        )
-                        results_table.add_row(
-                            "Final Energy", f"{results['final_energy']:.4f} eV"
-                        )
-                        results_table.add_row(
-                            "Energy Change", f"{results['energy_change']:.4f} eV"
-                        )
-
-                    console.print(results_table)
-
-                    # Output files
-                    console.print("\n[bold]Output Files:[/bold]")
-                    console.print(f"  [green]✓[/green] {results['unrelaxed_file']}")
-                    if results["relaxed_file"]:
-                        console.print(f"  [green]✓[/green] {results['relaxed_file']}")
-                        console.print(f"  [green]✓[/green] {results['visualization']}")
-
-                    console.print()
-
-                elif params["action"] == "analyze":
-                    # Full analysis with report generation
-                    results = run_analysis_workflow(params["element"], params["face"])
-
-                    # Show results
-                    console.print("\n[bold green]✓ Analysis complete![/bold green]\n")
-
-                    # Results table
-                    results_table = Table(
-                        title="Results", show_header=True, header_style="bold magenta"
-                    )
-                    results_table.add_column("Property", style="cyan", width=25)
-                    results_table.add_column("Value", style="green")
-
-                    results_table.add_row("Number of Atoms", str(results["num_atoms"]))
-                    results_table.add_row(
-                        "Initial Energy", f"{results['initial_energy']:.4f} eV"
-                    )
-                    results_table.add_row(
-                        "Final Energy", f"{results['final_energy']:.4f} eV"
-                    )
-                    results_table.add_row(
-                        "Energy Change", f"{results['energy_change']:.4f} eV"
-                    )
-
-                    console.print(results_table)
-
-                    # Output files
-                    console.print("\n[bold]Output Files:[/bold]")
-                    console.print(f"  [green]✓[/green] {results['unrelaxed_file']}")
-                    console.print(f"  [green]✓[/green] {results['relaxed_file']}")
-                    console.print(f"  [green]✓[/green] {results['visualization']}")
-                    console.print(f"  [green]✓[/green] {results['report_file']}")
-
-                    console.print()
-
-                elif params["action"] == "microscopy":
-                    console.print(
-                        f"[yellow]Microscopy simulation ({params['microscopy_type']}) will be implemented soon.[/yellow]"
-                    )
-                    console.print(
-                        "[dim]Surface relaxation completed. Microscopy simulation pending.[/dim]\n"
-                    )
-
-            except Exception as e:
-                # Print error without markup to avoid Rich parsing issues
-                console.print("\n[bold red]✗ Error:[/bold red]")
-                console.print(str(e), style="red", markup=False)
-                console.print()
-                logger.error(f"Workflow failed: {e}", exc_info=True)
+            _display_workflow_results(final_state)
+            console.print()
 
         except KeyboardInterrupt:
             console.print("\n\n[yellow]Quitting ATOMIC. Goodbye![/yellow]\n")
@@ -545,7 +514,7 @@ def run_interactive():
         except Exception as e:
             # Print error without markup to avoid Rich parsing issues
             console.print("\n[red]Error:[/red]")
-            console.print(str(e), style="red", markup=False)
+            console.print(str(e), style="red")
             console.print()
 
 

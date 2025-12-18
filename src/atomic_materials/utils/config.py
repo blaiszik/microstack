@@ -76,27 +76,6 @@ def init_output_dirs():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# def create_task_output_dir(element: str, face: str, task_id: str, status: str) -> Path:
-#     """
-#     Generates and creates a unique output directory for a given task.
-#     The directory structure will be: output/relaxation/{element}_{face}_{status}_{task_id}/
-
-#     Args:
-#         element: Chemical symbol (e.g., 'Cu', 'Pt').
-#         face: Surface face (e.g., '100', '111').
-#         task_id: Unique identifier for the task.
-#         status: The status of the structure (e.g., 'unrelaxed', 'relaxed').
-
-#     Returns:
-#         The Path object for the created output directory.
-#     """
-#     # Note: Logic updated to match user request for nested relaxation folder
-#     # or specific task isolation if needed.
-#     task_specific_dir = OUTPUT_DIR / f"{element}_{face}_{status}_{task_id}/relaxation"
-#     task_specific_dir.mkdir(parents=True, exist_ok=True)
-#     return task_specific_dir
-
-
 # =============================================================================
 # Logging Configuration
 # =============================================================================
