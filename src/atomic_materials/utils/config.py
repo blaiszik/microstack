@@ -21,7 +21,11 @@ except ImportError:
 # API Keys
 # =============================================================================
 
-# Anthropic API key for Claude (DEFAULT AGENT)
+# Google API key for Gemini (DEFAULT AGENT)
+# Get yours at: https://aistudio.google.com/app/apikey
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
+
+# Anthropic API key for Claude
 # Get yours at: https://console.anthropic.com/
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
@@ -37,9 +41,12 @@ MATERIALS_PROJECT_API_KEY = os.environ.get("MP_API_KEY", "")
 # Model Settings
 # =============================================================================
 
-# LLM Agent to use: "anthropic" (default) or "deepseek"
+# LLM Agent to use: "gemini" (default), "anthropic", or "deepseek"
 # At least one API key must be configured
-LLM_AGENT = os.environ.get("LLM_AGENT", "anthropic")
+LLM_AGENT = os.environ.get("LLM_AGENT", "gemini")
+
+# Gemini model to use (when LLM_AGENT=gemini)
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 
 # Claude model to use (when LLM_AGENT=anthropic)
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-20250514")
@@ -70,10 +77,17 @@ SUPPORTED_FACES = ["100", "111", "110", "graphene", "2d"]
 # Base output directory
 OUTPUT_DIR = Path("./output")
 
+# Output subdirectories
+OUTPUT_SUBDIRS: Dict[str, Path] = {
+    "relaxation": OUTPUT_DIR / "relaxation",
+}
+
 
 def init_output_dirs():
     """Create the base output directory if it doesn't exist."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for subdir in OUTPUT_SUBDIRS.values():
+        subdir.mkdir(parents=True, exist_ok=True)
 
 
 # =============================================================================
@@ -104,6 +118,11 @@ DEBUG_MODE = os.environ.get("DEBUG_MODE", "False").lower() == "true"
 def validate_config():
     """Check if required API keys are set."""
     warnings = []
+
+    if not GOOGLE_API_KEY and LLM_AGENT == "gemini":
+        warnings.append(
+            "GOOGLE_API_KEY not set but LLM_AGENT is 'gemini'. Query parsing disabled."
+        )
 
     if not ANTHROPIC_API_KEY and LLM_AGENT == "anthropic":
         warnings.append(

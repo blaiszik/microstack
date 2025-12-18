@@ -1,4 +1,4 @@
-# ATOMIC - AI Materials Scientist
+# MicroStack - AI Materials Scientist
 
 A CLI agent for analyzing atomic surfaces using Machine Learning Potentials, with experimental validation and AI-generated scientific reports.
 
@@ -33,7 +33,7 @@ A CLI agent for analyzing atomic surfaces using Machine Learning Potentials, wit
    pip install -e .
    ```
 
-   This installs all dependencies defined in `pyproject.toml` and registers the `atomic` CLI command.
+   This installs all dependencies defined in `pyproject.toml` and registers the `microstack` CLI command.
 
 3. **Configure API keys** (required for AI report generation):
 
@@ -54,30 +54,31 @@ A CLI agent for analyzing atomic surfaces using Machine Learning Potentials, wit
 4. **Verify installation**:
 
    ```bash
-   atomic --help
-   atomic check-config
+   microstack --help
+   microstack check-config
    ```
 
 ## Usage
 
-### Starting ATOMIC
+### Starting MicroStack
 
 ```bash
 # Interactive mode (recommended)
-atomic
+microstack
 
 # Or explicitly start interactive mode
-atomic interactive
+microstack interactive
 ```
 
 ### Available Commands
 
-| Command                          | Description                                 |
-| -------------------------------- | ------------------------------------------- |
-| `atomic relax Cu 100`            | Generate and relax Cu(100) surface          |
-| `atomic relax Pt 111 --no-relax` | Just generate structure without relaxation  |
-| `atomic check-config`            | Validate configuration and API connectivity |
-| `atomic --help`                  | Show all available commands                 |
+| Command                              | Description                                 |
+| ------------------------------------ | ------------------------------------------- |
+| `microstack relax Cu 100`            | Generate and relax Cu(100) surface          |
+| `microstack relax Pt 111 --no-relax` | Just generate structure without relaxation  |
+| `microstack simulate "query"`        | Run full LangGraph workflow with microscopy |
+| `microstack check-config`            | Validate configuration and API connectivity |
+| `microstack --help`                  | Show all available commands                 |
 
 ### Interactive Commands
 
@@ -113,7 +114,7 @@ User> analyze Cu 100
 
 ### The Analysis Pipeline
 
-When you run `analyze Cu 100`, the following steps occur:
+When you run `microstack simulate "Cu 100"`, the following steps occur:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -240,41 +241,54 @@ All output files are saved to the `src/atomic_materials/output/` directory with 
 ## Project Structure
 
 ```
-mic-hack/
+mic-hack2/
 ├── pyproject.toml                    # Project configuration and dependencies
 ├── .env.example                      # Environment variables template
 ├── README.md                         # This file
 ├── LICENSE                           # MIT License
 ├── .gitignore                        # Git exclusions
+├── PPSTM/                            # PPSTM submodule for IETS simulations
 │
 └── src/atomic_materials/             # Main package
     ├── __init__.py                   # Package marker
-    ├── config.py                     # API keys and settings
-    ├── settings.py                   # Pydantic settings management
-    ├── generate_surfaces.py          # Surface generation (ASE)
-    ├── surface_relaxation.py         # ML relaxation (MACE + FIRE)
-    ├── materials_project.py          # Reference data + MP API
-    ├── comparison.py                 # Analysis engine
-    ├── report_generator.py           # Report + Claude integration
     │
     ├── cli/                          # CLI subpackage
-    │   ├── __init__.py
     │   ├── app.py                    # Click CLI entry point
     │   └── interactive.py            # Interactive chat mode
     │
+    ├── agents/                       # Multi-agent workflow orchestration
+    │   ├── workflow.py               # LangGraph state machine
+    │   ├── state.py                  # WorkflowState Pydantic model
+    │   ├── structure_generator.py    # Structure generation agent
+    │   ├── microscopy_router.py      # Microscopy routing logic
+    │   └── microscopy/               # Microscopy simulation agents
+    │       ├── stm.py                # STM simulation (GPAW-based)
+    │       ├── afm.py                # AFM simulation (ppafm-based)
+    │       └── iets.py               # IETS simulation (PPSTM-based)
+    │
     ├── llm/                          # LLM integration subpackage
-    │   ├── __init__.py
-    │   ├── deepseek.py              # DeepSeek API client
-    │   └── prompts.py               # LLM prompt templates
+    │   ├── client.py                 # Unified LLM client factory
+    │   ├── anthropic.py              # Anthropic Claude client
+    │   ├── deepseek.py               # DeepSeek API client
+    │   ├── models.py                 # Pydantic query parsing models
+    │   └── prompts.py                # LLM prompt templates
+    │
+    ├── relaxation/                   # Structure relaxation pipeline
+    │   ├── generate_surfaces.py      # Surface generation (ASE)
+    │   ├── surface_relaxation.py     # ML relaxation (MACE + FIRE)
+    │   ├── materials_project.py      # Reference data + MP API
+    │   ├── comparison.py             # Analysis engine
+    │   ├── relax_report_generator.py # Report + Claude integration
+    │   └── scilink_integration.py    # SciLink structure generation
     │
     ├── utils/                        # Utilities subpackage
-    │   ├── __init__.py
-    │   ├── exceptions.py            # Custom exception classes
-    │   ├── gpu_detection.py         # CUDA/GPU utilities
-    │   └── logging.py               # Rich-based logging setup
+    │   ├── config.py                 # API keys and configuration
+    │   ├── settings.py               # Pydantic settings management
+    │   ├── exceptions.py             # Custom exception classes
+    │   ├── gpu_detection.py          # CUDA/GPU utilities
+    │   └── logging.py                # Rich-based logging setup
     │
     └── output/                       # Runtime output directory (generated)
-        └── {task_id}/relaxation/    # Task-specific outputs
 ```
 
 ## License

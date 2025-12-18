@@ -9,6 +9,9 @@ from atomic_materials.utils.settings import settings
 from atomic_materials.utils.exceptions import LLMConnectionError
 from atomic_materials.llm.models import ParsedQuery
 
+# Use the existing max_retries setting for SciLink code generation
+MAX_SCILINK_RETRIES = settings.max_retries
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,30 +91,43 @@ class SciLinkIntegration:
         user_request = f"{supercell_x}x{supercell_y}x{supercell_z} {material_formula}{miller_indices} surface with {vacuum_thickness}A vacuum. Save in {output_format} format."
         logger.info(f"SciLink structure generation request: {user_request}")
 
-        try:
-            gen_result = self.structure_generator.generate_script(
-                original_user_request=user_request,
-                attempt_number_overall=1,
-                is_refinement_from_validation=False,
-            )
-
-            if gen_result["status"] == "success":
-                final_structure_path = gen_result["output_file"]
+        # Retry loop with refinement cycles enabled
+        last_error = None
+        for attempt in range(1, MAX_SCILINK_RETRIES + 1):
+            is_refinement = attempt > 1  # Enable refinement after first attempt
+            try:
                 logger.info(
-                    f"SciLink successfully generated structure: {final_structure_path}"
+                    f"SciLink attempt {attempt}/{MAX_SCILINK_RETRIES} "
+                    f"(refinement={is_refinement})"
                 )
-                return {"status": "success", "file_path": final_structure_path}
-            else:
-                message = gen_result.get(
-                    "message", "Unknown error during SciLink structure generation."
+                gen_result = self.structure_generator.generate_script(
+                    original_user_request=user_request,
+                    attempt_number_overall=attempt,
+                    is_refinement_from_validation=is_refinement,
                 )
-                logger.error(f"SciLink structure generation failed: {message}")
-                return {"status": "error", "message": message}
-        except Exception as e:
-            logger.error(
-                f"Error during SciLink structure generation: {e}", exc_info=True
-            )
-            return {
-                "status": "error",
-                "message": f"Exception during SciLink generation: {e}",
-            }
+
+                if gen_result["status"] == "success":
+                    final_structure_path = gen_result["output_file"]
+                    logger.info(
+                        f"SciLink successfully generated structure on attempt {attempt}: "
+                        f"{final_structure_path}"
+                    )
+                    return {"status": "success", "file_path": final_structure_path}
+                else:
+                    last_error = gen_result.get(
+                        "message", "Unknown error during SciLink structure generation."
+                    )
+                    logger.warning(
+                        f"SciLink attempt {attempt}/{MAX_SCILINK_RETRIES} failed: {last_error}"
+                    )
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(
+                    f"SciLink attempt {attempt}/{MAX_SCILINK_RETRIES} raised exception: {e}"
+                )
+
+        # All attempts failed
+        logger.error(
+            f"SciLink structure generation failed after {MAX_SCILINK_RETRIES} attempts: {last_error}"
+        )
+        return {"status": "error", "message": last_error}

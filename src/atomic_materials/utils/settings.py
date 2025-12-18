@@ -1,4 +1,4 @@
-"""Configuration settings for ATOMIC using Pydantic Settings."""
+"""Configuration settings for MicroStack using Pydantic Settings."""
 
 from pathlib import Path
 from typing import Literal, Optional
@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Main configuration for ATOMIC."""
+    """Main configuration for MicroStack."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     google_api_key: str = Field(
         ...,
         description="Google API key for Gemini models used by SciLink (required)",
+    )
+    gemini_model: str = Field(
+        default="gemini-3-flash-preview",
+        description="Gemini model to use for query parsing",
     )
     scilink_generator_model: str = Field(
         default="gemini-2.5-flash",
@@ -35,9 +39,9 @@ class Settings(BaseSettings):
         default="claude-sonnet-4-5-20250929",
         description="Claude model to use",
     )
-    llm_agent: Literal["anthropic", "deepseek"] = Field(
-        default="anthropic",
-        description="Which LLM agent to use (anthropic or deepseek)",
+    llm_agent: Literal["gemini", "anthropic", "deepseek"] = Field(
+        default="gemini",
+        description="Which LLM agent to use for query parsing (gemini, anthropic, or deepseek)",
     )
     deepseek_api_key: Optional[str] = Field(
         default=None,

@@ -1,4 +1,4 @@
-"""Unified LLM client factory for selecting between Anthropic and DeepSeek."""
+"""Unified LLM client factory for selecting between Gemini, Anthropic, and DeepSeek."""
 
 from typing import Union
 
@@ -13,7 +13,7 @@ def get_llm_client() -> Union:
     Get LLM client based on configuration.
 
     Returns:
-        Either AnthropicClient or DeepSeekClient depending on LLM_AGENT setting
+        GeminiClient, AnthropicClient, or DeepSeekClient depending on LLM_AGENT setting
 
     Raises:
         ValueError: If configured LLM agent is not recognized
@@ -21,7 +21,12 @@ def get_llm_client() -> Union:
     """
     llm_agent = config.LLM_AGENT.lower()
 
-    if llm_agent == "anthropic":
+    if llm_agent == "gemini":
+        logger.info("Using Google Gemini LLM client")
+        from atomic_materials.llm.gemini import get_gemini_client
+        return get_gemini_client()
+
+    elif llm_agent == "anthropic":
         logger.info("Using Anthropic Claude LLM client")
         from atomic_materials.llm.anthropic import get_anthropic_client
         return get_anthropic_client()
@@ -34,7 +39,7 @@ def get_llm_client() -> Union:
     else:
         raise ValueError(
             f"Unknown LLM agent: {llm_agent}. "
-            f"Supported options are 'anthropic' or 'deepseek'. "
+            f"Supported options are 'gemini', 'anthropic', or 'deepseek'. "
             f"Set LLM_AGENT environment variable or config."
         )
 

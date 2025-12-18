@@ -1,4 +1,4 @@
-"""ATOMIC CLI application - Main entry point."""
+"""MicroStack CLI application - Main entry point."""
 
 import os
 import sys
@@ -30,10 +30,10 @@ logger = get_logger("cli")
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-@click.version_option(version="0.1.0", prog_name="ATOMIC")
+@click.version_option(version="0.1.0", prog_name="MicroStack")
 def cli(ctx: click.Context) -> None:
     """
-    ATOMIC - AI Materials Scientist.
+    MicroStack - AI Materials Scientist.
 
     Analyze atomic surfaces using Machine Learning Potentials,
     with experimental validation and AI-generated scientific reports.
@@ -49,7 +49,7 @@ def interactive() -> None:
     """
     Start interactive chat mode for conversational simulation creation.
 
-    Chat with ATOMIC to generate surfaces, relax structures, and run simulations.
+    Chat with MicroStack to generate surfaces, relax structures, and run simulations.
     """
     from atomic_materials.cli.interactive import run_interactive
 
@@ -69,9 +69,9 @@ def relax(element: str, face: str, relax: bool, steps: int, output_dir: str) -> 
     Generate and optionally relax a surface structure.
 
     Examples:
-        atomic relax Cu 100
-        atomic relax Pt 111 --no-relax
-        atomic relax C graphene --steps 300
+        microstack relax Cu 100
+        microstack relax Pt 111 --no-relax
+        microstack relax C graphene --steps 300
     """
     from atomic_materials.relaxation.generate_surfaces import create_surface
     from atomic_materials.relaxation.surface_relaxation import (
@@ -211,7 +211,7 @@ def query(query: str, relax: bool) -> None:
     """
     Generate structure via SciLink and relax using MACE.
 
-    Example: atomic query "3x3x4 Cu(111) surface with 15A vacuum"
+    Example: microstack query "3x3x4 Cu(111) surface with 15A vacuum"
     """
     import scilink as sl
     from pathlib import Path
@@ -300,14 +300,14 @@ def simulate(query: str) -> None:
     Uses LLM-powered parsing for structure generation and optional microscopy.
 
     Examples:
-        atomic simulate "Build a 3x3x4 Cu(111) surface with 15A vacuum"
-        atomic simulate "Generate Pt(111), relax it, then run STM"
-        atomic simulate "Create graphene (001) with 10A vacuum and run AFM"
+        microstack simulate "Build a 3x3x4 Cu(111) surface with 15A vacuum"
+        microstack simulate "Generate Pt(111), relax it, then run STM"
+        microstack simulate "Create graphene (001) with 10A vacuum and run AFM"
     """
     from atomic_materials.agents.workflow import run_workflow
     from rich.table import Table
 
-    console.print(f"\n[bold cyan]ATOMIC Simulation Workflow[/bold cyan]\n")
+    console.print(f"\n[bold cyan]MicroStack Simulation Workflow[/bold cyan]\n")
     console.print(f"[cyan]Query:[/cyan] {query}\n")
 
     # Create session ID
@@ -420,7 +420,14 @@ def check_config() -> None:
     # Check LLM Agent
     console.print(f"[bold]LLM Agent:[/bold] {config.LLM_AGENT.upper()}")
 
-    if config.LLM_AGENT == "anthropic":
+    if config.LLM_AGENT == "gemini":
+        if config.GOOGLE_API_KEY:
+            console.print("[green]✓[/green] Google API key configured")
+            console.print(f"[green]✓[/green] Using model: {config.GEMINI_MODEL}")
+        else:
+            console.print("[red]✗[/red] Google API key not set")
+
+    elif config.LLM_AGENT == "anthropic":
         if config.ANTHROPIC_API_KEY:
             console.print("[green]✓[/green] Anthropic API key configured")
             try:
@@ -498,15 +505,15 @@ def check_config() -> None:
 def show_welcome() -> None:
     """Display welcome message."""
     llm_agent = config.LLM_AGENT.upper()
-    welcome_text = f"""[bold cyan]ATOMIC[/bold cyan] - AI Materials Scientist
+    welcome_text = f"""[bold cyan]MicroStack[/bold cyan] - AI Materials Scientist
 
 Analyze atomic surfaces using Machine Learning Potentials!
 
 [bold]Quick Start:[/bold]
-  • [green]atomic[/green] - Start interactive mode (recommended)
-  • [green]atomic relax Cu 100[/green] - Generate and relax Cu(100)
-  • [green]atomic analyze Pt 111[/green] - Full analysis with AI report
-  • [green]atomic check-config[/green] - Check configuration
+  • [green]microstack[/green] - Start interactive mode (recommended)
+  • [green]microstack relax Cu 100[/green] - Generate and relax Cu(100)
+  • [green]microstack analyze Pt 111[/green] - Full analysis with AI report
+  • [green]microstack check-config[/green] - Check configuration
 
 [bold]LLM Agent:[/bold] {llm_agent} (Anthropic or DeepSeek)
 [bold]Features:[/bold] Surface Generation | MACE ML Relaxation | AI Reports
