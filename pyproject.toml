@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "microstack-materials"
+name = "microstack"
 version = "0.1.0"
 description = "AI Materials Scientist - Analyze atomic surfaces using Machine Learning Potentials"
 readme = "README.md"
@@ -33,6 +33,7 @@ dependencies = [
     "mace-torch>=0.3.12",
     "torch>=2.0.0",
     "torch-sim-atomistic>=0.3.0",
+    "cuequivariance-torch",
     "scilink",
     "gpaw",
     "ppafm[opencl]",
@@ -53,4 +54,4 @@ dependencies = [
 ]
 
 [project.scripts]
-microstack = "atomic_materials.cli.app:main"
+microstack = "microstack.cli.app:main"

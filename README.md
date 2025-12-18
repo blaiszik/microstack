@@ -229,7 +229,7 @@ The reduced coordination causes:
 
 ## Output Files
 
-All output files are saved to the `src/atomic_materials/output/` directory with task-specific subdirectories.
+All output files are saved to the `output/` directory with task-specific subdirectories.
 
 | File                              | Contents                                         |
 | --------------------------------- | ------------------------------------------------ |
@@ -249,7 +249,7 @@ mic-hack2/
 ├── .gitignore                        # Git exclusions
 ├── PPSTM/                            # PPSTM submodule for IETS simulations
 │
-└── src/atomic_materials/             # Main package
+└── src/microstack/             # Main package
     ├── __init__.py                   # Package marker
     │
     ├── cli/                          # CLI subpackage
