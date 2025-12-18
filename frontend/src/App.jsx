@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
-import {
-  Search,
-  Layers,
-  Activity,
-  Terminal,
-  Microscope,
-  Info,
-  ChevronRight,
-  Maximize2,
-} from "lucide-react";
+import { Terminal, Sparkles } from "lucide-react";
 import logo from "./assets/microstack-logo.png";
 import "./App.css";
 
-const API_BASE_URL = "http://localhost:8000";
+// Use relative URLs - Vite proxy handles routing to backend
+const API_BASE_URL = "";
 
 function App() {
   const [query, setQuery] = useState("");
@@ -109,12 +101,8 @@ function App() {
   return (
     <div className="app-container">
       <header>
-        <img
-          src={logo}
-          alt="µ-Stack Logo"
-          style={{ width: "200px", marginBottom: "16px" }}
-        />
-        <p>AI Materials Scientist | Zoom In To Atomic Scale</p>
+        <img src={logo} alt="µ-Stack Logo" />
+        <p>AI Materials Scientist · Zoom In To Atomic Scale</p>
       </header>
 
       <section className="query-section">
@@ -136,7 +124,7 @@ function App() {
                 onClick={() => setShowLogs(!showLogs)}
               >
                 <Terminal size={16} />
-                Logs
+                {showLogs ? "Hide Logs" : "View Logs"}
               </button>
             )}
             <button type="submit" disabled={loading || !query.trim()}>
@@ -144,7 +132,8 @@ function App() {
                 <div className="spinner"></div>
               ) : (
                 <>
-                  <Search size={18} /> Run
+                  <Sparkles size={18} />
+                  Run Simulation
                 </>
               )}
             </button>
@@ -170,67 +159,43 @@ function App() {
         <main>
           {results.ai_summary_md && (
             <section className="summary-card">
-              <h2 style={{ textAlign: 'center', marginBottom: '24px', fontSize: '28px' }}>AI Scientific Summary</h2>
+              <h2>AI Scientific Summary</h2>
               <div className="markdown-body">
                 <ReactMarkdown>{results.ai_summary_md}</ReactMarkdown>
               </div>
             </section>
           )}
 
-          <section className="image-gallery">
-            <h2>Data Folder Assets</h2>
-            <div className="results-grid">
-              {results.all_images &&
-                results.all_images
-                .filter(img => !img.toLowerCase().includes('unrelaxed'))
-                .map((img, idx) => (
-                  <div
-                    key={idx}
-                    className="result-card"
-                    style={img.endsWith(".xyz") ? { width: "624px" } : {}}
-                  >
-                    <h3>{img.split(/[\\/]/).pop()}</h3>
-                    <div
-                      className="result-image-container"
-                      style={
-                        img.endsWith(".xyz")
-                          ? {
-                              background: "#1c1c1e",
-                              height: "300px",
-                              alignItems: "flex-start",
-                              padding: "15px",
-                            }
-                          : {}
-                      }
-                    >
-                      {img.endsWith(".xyz") ? (
-                        <pre
-                          style={{
-                            color: "#34c759",
-                            fontSize: "12px",
-                            margin: 0,
-                            overflow: "auto",
-                            width: "100%",
-                            height: "100%",
-                          }}
-                        >
-                          {assetContents[img] || "Loading structure data..."}
-                        </pre>
-                      ) : (
-                        <img
-                          src={getImageUrl(img)}
-                          alt="Data Asset"
-                          className="result-image"
-                        />
-                      )}
+          {results.all_images && results.all_images.length > 0 && (
+            <section className="image-gallery">
+              <h2>Simulation Results</h2>
+              <div className="results-grid">
+                {results.all_images
+                  .filter((img) => !img.toLowerCase().includes("unrelaxed"))
+                  .map((img, idx) => (
+                    <div key={idx} className="result-card">
+                      <h3>{img.split(/[\\/]/).pop()}</h3>
+                      <div className="result-image-container">
+                        {img.endsWith(".xyz") ? (
+                          <pre className="xyz-viewer">
+                            {assetContents[img] || "Loading structure data..."}
+                          </pre>
+                        ) : (
+                          <img
+                            src={getImageUrl(img)}
+                            alt="Simulation result"
+                            className="result-image"
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-            </div>
-          </section>
+                  ))}
+              </div>
+            </section>
+          )}
 
           {results.report_md && (
-            <section className="summary-card" style={{ marginTop: "40px" }}>
+            <section className="summary-card">
               <div className="markdown-body">
                 <ReactMarkdown>{results.report_md}</ReactMarkdown>
               </div>

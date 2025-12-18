@@ -1,276 +1,520 @@
-:root {
-  --apple-blue: #007aff;
-  --apple-pink: #ff2d55;
-  --apple-purple: #af52de;
-  --bg-color: #f2f2f7;
-  --card-bg: rgba(255, 255, 255, 0.85);
-  --text-primary: #1d1d1f;
-  --text-secondary: #636366;
-  --border-radius-lg: 28px;
-  --border-radius-sm: 16px;
-  --glass: blur(20px) saturate(180%);
-  --accent-gradient: linear-gradient(135deg, #007aff 0%, #af52de 100%);
+/*
+ * µ-Stack Design System
+ * Inspired by Apple's design philosophy: Simplicity. Clarity. Depth.
+ */
 
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-  color: var(--text-primary);
-  background-color: var(--bg-color);
+:root {
+  /* Core palette - inspired by Apple's refined color system */
+  --white: #ffffff;
+  --black: #1d1d1f;
+  --gray-50: #fbfbfd;
+  --gray-100: #f5f5f7;
+  --gray-200: #e8e8ed;
+  --gray-300: #d2d2d7;
+  --gray-400: #86868b;
+  --gray-500: #6e6e73;
+  --gray-600: #424245;
+
+  /* Accent colors */
+  --blue: #0071e3;
+  --blue-hover: #0077ed;
+  --blue-light: rgba(0, 113, 227, 0.08);
+  --green: #34c759;
+  --green-dark: #248a3d;
+  --purple: #af52de;
+  --pink: #ff2d55;
+
+  /* Semantic */
+  --text-primary: var(--black);
+  --text-secondary: var(--gray-500);
+  --text-tertiary: var(--gray-400);
+  --background: var(--gray-50);
+  --surface: var(--white);
+  --surface-elevated: var(--white);
+  --border: rgba(0, 0, 0, 0.04);
+  --border-strong: rgba(0, 0, 0, 0.08);
+
+  /* Effects */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 24px 80px rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-blur: blur(20px) saturate(180%);
+
+  /* Radii - Apple's signature curves */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 980px;
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --duration-fast: 0.15s;
+  --duration-normal: 0.25s;
+  --duration-slow: 0.4s;
+
+  /* Typography */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Base reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
-  background-image:
-    radial-gradient(at 0% 0%, rgba(0, 122, 255, 0.18) 0px, transparent 70%),
-    radial-gradient(at 100% 0%, rgba(175, 82, 222, 0.18) 0px, transparent 70%),
-    radial-gradient(at 50% 100%, rgba(255, 45, 85, 0.12) 0px, transparent 80%);
-  background-attachment: fixed;
-  background-color: #fbfbfd;
+  background: var(--background);
+  color: var(--text-primary);
+  line-height: 1.47059;
+  font-weight: 400;
+  letter-spacing: -0.022em;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle ambient background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -20%, rgba(0, 113, 227, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% -10%, rgba(175, 82, 222, 0.06), transparent);
+  pointer-events: none;
+  z-index: -1;
 }
 
 #root {
-  width: 90vw;
-  max-width: 1400px;
+  width: 100%;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 40px 0;
-  box-sizing: border-box;
+  padding: 60px 24px 120px;
 }
+
+/* ============================================
+   HEADER - Hero introduction
+   ============================================ */
 
 header {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: 64px;
+  padding-top: 20px;
+}
+
+header img {
+  width: 180px;
+  height: auto;
+  margin-bottom: 20px;
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+header img:hover {
+  transform: scale(1.02);
 }
 
 header p {
-  font-size: 18px;
-  /* Reduced from 28px */
+  font-size: 21px;
   font-weight: 400;
   color: var(--text-secondary);
+  letter-spacing: 0.011em;
+  line-height: 1.381;
 }
 
+/* ============================================
+   QUERY SECTION - The command center
+   ============================================ */
+
 .query-section {
-  background: var(--card-bg);
-  backdrop-filter: var(--glass);
-  -webkit-backdrop-filter: var(--glass);
-  border-radius: var(--border-radius-lg);
-  padding: 24px 32px;
-  margin-bottom: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  width: 100%;
-  box-sizing: border-box;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-xl);
+  padding: 28px 32px;
+  margin-bottom: 48px;
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border);
+  transition:
+    box-shadow var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
+}
+
+.query-section:focus-within {
+  box-shadow:
+    var(--shadow-xl),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.9),
+    0 0 0 4px var(--blue-light);
+  transform: translateY(-2px);
 }
 
 .query-input {
   width: 100%;
   border: none;
   background: transparent;
-  font-size: 18px;
-  /* Balanced font size */
+  font-size: 19px;
+  font-weight: 400;
   color: var(--text-primary);
   outline: none;
   resize: none;
-  min-height: 24px;
+  min-height: 28px;
   line-height: 1.5;
   overflow: hidden;
+  letter-spacing: -0.022em;
+}
+
+.query-input::placeholder {
+  color: var(--text-tertiary);
 }
 
 .button-group {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  align-items: center;
+  margin-top: 20px;
   gap: 12px;
 }
 
+/* ============================================
+   BUTTONS - Tactile and responsive
+   ============================================ */
+
 button {
-  background: var(--apple-blue);
-  color: white;
-  border: none;
-  border-radius: 980px;
-  padding: 10px 20px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  background: var(--blue);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 12px 24px;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.022em;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button:hover:not(:disabled) {
-  transform: scale(1.03);
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
+  background: var(--blue-hover);
+  transform: scale(1.02);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .secondary-button {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--gray-100);
   color: var(--text-primary);
 }
 
-.secondary-button:hover {
-  background: rgba(0, 0, 0, 0.1);
+.secondary-button:hover:not(:disabled) {
+  background: var(--gray-200);
 }
+
+/* ============================================
+   LOG VIEWER - Terminal elegance
+   ============================================ */
+
+.log-viewer {
+  background: linear-gradient(180deg, #1c1c1e 0%, #141416 100%);
+  border-radius: var(--radius-lg);
+  margin: 32px 0;
+  padding: 24px 28px;
+  font-family: "SF Mono", "Menlo", "Monaco", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--green);
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.log-viewer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(52, 199, 89, 0.3), transparent);
+}
+
+.log-content {
+  max-height: 280px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.log-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.log-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================
+   ERROR MESSAGE
+   ============================================ */
+
+.error-message {
+  background: linear-gradient(135deg, rgba(255, 45, 85, 0.1) 0%, rgba(255, 45, 85, 0.05) 100%);
+  border: 1px solid rgba(255, 45, 85, 0.2);
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+  margin: 24px 0;
+  color: var(--pink);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ============================================
+   SUMMARY CARD - Content showcase
+   ============================================ */
 
 .summary-card {
-  background: var(--card-bg);
-  backdrop-filter: var(--glass);
-  -webkit-backdrop-filter: var(--glass);
-  border-radius: var(--border-radius-lg);
-  padding: 40px;
-  margin-bottom: 32px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: 48px 56px;
+  margin-bottom: 40px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  transition: box-shadow var(--duration-normal) var(--ease-out);
 }
 
-.summary-card h1,
+.summary-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
 .summary-card h2 {
-  font-weight: 700;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
   color: var(--text-primary);
   text-align: center;
-  font-size: 28px;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
-.markdown-summary-body {
-  font-size: 16px;
-  line-height: 1.6;
-  margin: 0 auto;
-  text-align: center;
-}
+/* ============================================
+   MARKDOWN BODY - Readable content
+   ============================================ */
 
 .markdown-body {
-  text-align: center;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-primary);
 }
 
 .markdown-body h1 {
-  font-size: 28px !important;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
   text-align: center;
   margin-bottom: 24px;
-}
-
-.markdown-body h2 {
-  font-size: 20px !important;
-  text-align: center;
-  margin-top: 32px;
-  margin-bottom: 16px;
-  color: var(--apple-blue);
-}
-
-.markdown-body h3 {
-  font-size: 16px !important;
-  text-align: center;
-  margin-top: 24px;
   color: var(--text-primary);
 }
 
-.markdown-body ul {
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+.markdown-body h2 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
+  text-align: center;
+  margin: 40px 0 20px;
+  color: var(--text-primary);
 }
 
-.markdown-body li {
-  background: none;
-  padding: 0;
-  border-radius: 0;
+.markdown-body h3 {
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  margin: 28px 0 12px;
+  color: var(--text-secondary);
+}
+
+.markdown-body p {
+  margin: 16px 0;
   text-align: center;
 }
 
-.results-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  justify-content: center;
-  max-width: 100%;
-  margin: 0 auto;
+.markdown-body ul {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
 }
 
-.result-card {
-  background: white;
-  border-radius: var(--border-radius-sm);
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease;
-  width: 300px;
-  flex-shrink: 0;
+.markdown-body li {
+  position: relative;
+  padding: 8px 0;
+  text-align: center;
+  color: var(--text-secondary);
 }
 
-.result-card:hover {
-  transform: translateY(-4px);
+.markdown-body strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.markdown-body code {
+  font-family: "SF Mono", monospace;
+  font-size: 14px;
+  background: var(--gray-100);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.markdown-body pre {
+  background: #1c1c1e;
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 24px 0;
+}
+
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+  color: var(--green);
+}
+
+/* ============================================
+   IMAGE GALLERY - Visual storytelling
+   ============================================ */
+
+.image-gallery {
+  margin: 48px 0;
 }
 
 .image-gallery h2 {
   font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 30px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
+  margin-bottom: 36px;
   text-align: center;
   color: var(--text-primary);
 }
 
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  justify-content: center;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
 }
 
+/* ============================================
+   RESULT CARD - Each visualization
+   ============================================ */
+
 .result-card {
-  background: white;
-  border-radius: var(--border-radius-sm);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  transition:
+    transform var(--duration-normal) var(--ease-spring),
+    box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .result-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: var(--shadow-xl);
 }
 
 .result-card h3 {
-  padding: 16px 16px 8px;
+  padding: 18px 20px 14px;
   margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--border);
 }
 
 .result-image-container {
   width: 100%;
   aspect-ratio: 1;
-  background: #000;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .result-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transition: transform var(--duration-slow) var(--ease-out);
 }
 
-.log-viewer {
-  background: #1c1c1e;
-  border-radius: 16px;
-  margin: 24px 0;
-  padding: 24px;
+.result-card:hover .result-image {
+  transform: scale(1.05);
+}
+
+/* Structure file display (.xyz) */
+.xyz-viewer {
+  background: linear-gradient(180deg, #0f0f10 0%, #1c1c1e 100%);
+  color: var(--green);
   font-family: "SF Mono", monospace;
-  font-size: 13px;
-  color: #34c759;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 16px 20px;
+  margin: 0;
+  overflow: auto;
+  width: 100%;
+  height: 100%;
+  text-align: left;
 }
 
-.log-content {
-  max-height: 300px;
-  overflow-y: auto;
-}
+/* ============================================
+   SPINNER - Loading state
+   ============================================ */
 
 .spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--white);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -279,4 +523,108 @@ button:hover:not(:disabled) {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+  #root {
+    padding: 40px 20px 80px;
+  }
+
+  header {
+    margin-bottom: 48px;
+  }
+
+  header img {
+    width: 140px;
+  }
+
+  header p {
+    font-size: 17px;
+  }
+
+  .query-section {
+    padding: 20px 24px;
+    border-radius: var(--radius-lg);
+  }
+
+  .query-input {
+    font-size: 17px;
+  }
+
+  .summary-card {
+    padding: 32px 24px;
+    border-radius: var(--radius-lg);
+  }
+
+  .summary-card h2 {
+    font-size: 24px;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .image-gallery h2 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  button {
+    padding: 10px 20px;
+    font-size: 15px;
+  }
+
+  .button-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .button-group button {
+    width: 100%;
+  }
+}
+
+/* ============================================
+   SELECTION & FOCUS STATES
+   ============================================ */
+
+::selection {
+  background: rgba(0, 113, 227, 0.2);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--blue-light);
+}
+
+/* ============================================
+   SMOOTH SCROLLBAR (WebKit)
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
