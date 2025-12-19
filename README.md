@@ -1,296 +1,662 @@
-# MicroStack - AI Materials Scientist
+# µStack: Multi-Agent Atomistic Microscopy Simulation Platform
 
-A CLI agent for analyzing atomic surfaces using Machine Learning Potentials, with experimental validation and AI-generated scientific reports.
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://img.shields.io/badge/PyPI-microstack-0.1.0-blueviolet)](https://pypi.org/project/microstack)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+![Status](https://img.shields.io/badge/status-Alpha-orange)
 
-## Features
+![µStack Logo](assets/microstack-logo.png)
 
-- **Surface Generation**: Create atomic surfaces for FCC metals (Cu, Pt, Au, Ag, Ni, Pd) and 2D materials (Graphene, MoS2)
-- **ML Relaxation**: Relax surfaces using MACE-MP potential trained on Materials Project DFT data
-- **Experimental Validation**: Compare predictions against LEED/DFT reference data from literature
-- **AI Scientific Reports**: Generate publication-style reports with Claude-powered discussion sections
-- **Rich CLI**: Interactive terminal with markdown rendering
+An advanced AI-powered platform for atomistic microscopy simulations, combining multi-agent workflows, machine learning potentials, and LLM-assisted analysis to simulate surface structures across multiple experimental techniques.
+
+## Key Features
+
+### 🔬 Multi-Technique Microscopy Simulation
+
+- **STM (Scanning Tunneling Microscopy)**: DFT-based simulations using GPAW with LDOS calculations
+- **IETS (Inelastic Electron Tunneling Spectroscopy)**: Spectroscopic analysis via pyPPSTM integration
+- **TEM (Transmission Electron Microscopy)**: Multislice wave-function simulations with abTEM
+- **AFM (Atomic Force Microscopy)**: Tip-sample interaction modeling with ppafm OpenCL acceleration
+
+### 🤖 Intelligent Workflow Orchestration
+
+- **LangGraph-based multi-agent system**: Sequential routing of structure generation → relaxation → microscopy simulations
+- **Session-aware execution**: Reuse structures across multiple microscopy techniques without regeneration
+- **Intelligent command chaining**: Execute relaxation→STM→IETS in a single workflow
+- **Real-time progress tracking**: WebSocket-enabled status updates for long-running simulations
+
+### 🏗️ Flexible Structure Generation
+
+- **Multi-backend support**: SciLink LLM-powered generation with Materials Project database fallback
+- **FCC metal surfaces**: Cu, Pt, Au, Ag, Ni, Pd on (100), (111), and (110) faces
+- **2D materials**: Graphene and MoS₂ with automatic lattice parameter optimization
+- **Session persistence**: Generated structures available for subsequent simulations without regeneration
+
+### ⚡ ML-Accelerated Relaxation
+
+- **MACE-MP potential**: Universal machine learning potential trained on ~150k Materials Project DFT calculations
+- **FIRE optimization**: Fast inertial relaxation with GPU acceleration support
+- **Physical validation**: Automatic vacuum correction and structure validation
+
+### 🧠 AI-Assisted Analysis
+
+- **Multi-LLM support**: Claude (Anthropic), DeepSeek, and Google Gemini for query parsing and report generation
+- **Intelligent query parsing**: Natural language understanding of simulation requests
+- **Automated reports**: AI-generated discussion sections with physics interpretation and literature comparisons
+- **NSID metadata**: Scientific data export via NSID format for standardized experimental data representation
+
+### 💻 Multi-Interface Support
+
+- **Interactive CLI**: Rich terminal UI with markdown rendering and real-time progress updates
+- **FastAPI Web API**: Modern REST API with WebSocket support for async simulation execution
+- **Session management**: Global session tracking across CLI and web interfaces
+- **File serving**: Automatic static file serving of generated images and data files
 
 ## Installation
 
-### Prerequisites
+### From PyPI (Recommended)
 
-- Python 3.12 or higher
-- pip (Python package manager)
-- CUDA/GPU support (recommended for faster relaxation)
+```bash
+pip install microstack
+```
 
-### Setup Steps
+This installs the `microstack` package and registers the CLI command.
+
+### From Source
 
 1. **Clone the repository**:
 
    ```bash
-   git clone <repository-url>
-   cd mic-hack
+   git clone https://github.com/blaiszik/microstack.git
+   cd microstack
    ```
 
-2. **Install the package**:
+2. **Install in editable mode**:
 
    ```bash
    pip install -e .
    ```
 
-   This installs all dependencies defined in `pyproject.toml` and registers the `microstack` CLI command.
+### System Requirements
 
-3. **Configure API keys** (required for AI report generation):
+- **Python**: 3.12 or higher
+- **Memory**: 16+ GB recommended for large structure simulations
+- **GPU** (recommended): CUDA-capable GPU for accelerated relaxation and STM calculations
+  - GPAW and MACE models benefit significantly from GPU acceleration
+  - CPU-only operation is supported but slower
 
-   Create a `.env` file in the project root:
+### Configuration
 
-   ```bash
-   ANTHROPIC_API_KEY="sk-ant-..."  # For Claude AI discussion generation
-   MP_API_KEY="..."                 # For Materials Project queries (optional)
-   ```
+Set up environment variables for API access:
 
-   Or set environment variables:
+```bash
+# For Anthropic Claude (AI report generation)
+export ANTHROPIC_API_KEY="sk-ant-..."
 
-   ```bash
-   export ANTHROPIC_API_KEY="sk-ant-..."
-   export MP_API_KEY="..."
-   ```
+# For Materials Project database queries (optional)
+export MP_API_KEY="your-mp-api-key"
 
-4. **Verify installation**:
+# For Google Gemini (alternative LLM)
+export GOOGLE_API_KEY="your-google-api-key"
 
-   ```bash
-   microstack --help
-   microstack check-config
-   ```
+# For DeepSeek (alternative LLM)
+export DEEPSEEK_API_KEY="your-deepseek-api-key"
+```
+
+Or create a `.env` file in your working directory with the above variables.
+
+### Verify Installation
+
+```bash
+microstack --help
+microstack check-config
+```
 
 ## Usage
 
-### Starting MicroStack
+### Interactive Mode (Recommended)
+
+Start the interactive CLI:
 
 ```bash
-# Interactive mode (recommended)
 microstack
-
-# Or explicitly start interactive mode
-microstack interactive
 ```
 
-### Available Commands
+This launches an interactive chat interface where you can describe what you want to simulate in natural language.
 
-| Command                              | Description                                 |
-| ------------------------------------ | ------------------------------------------- |
-| `microstack relax Cu 100`            | Generate and relax Cu(100) surface          |
-| `microstack relax Pt 111 --no-relax` | Just generate structure without relaxation  |
-| `microstack simulate "query"`        | Run full LangGraph workflow with microscopy |
-| `microstack check-config`            | Validate configuration and API connectivity |
-| `microstack --help`                  | Show all available commands                 |
+![µ-Stack Terminal Interface](assets/microstack-terminal.png)
+
+**Terminal Features:**
+
+- Rich markdown rendering with syntax highlighting
+- Real-time progress tracking and status updates
+- Interactive multi-step workflow support
+- Formatted reports with embedded metrics and visualizations
 
 ### Interactive Commands
 
-In interactive mode, you can use natural language or direct commands:
+Use natural language to request simulations:
 
 ```
-You> analyze Cu 100
-You> relax Pt 111
-You> generate graphene
-You> quit
+microstack> relax Cu 100
+microstack> analyze Pt 111 with STM
+microstack> generate graphene and run STM and IETS
+microstack> run TEM on gold 111
+microstack> relax and scan with AFM
+microstack> help
+microstack> quit
 ```
 
-### Example Session
+### Web Interface
 
-```
-User> analyze Cu 100
+Launch the FastAPI web server:
 
-[1/5] Generating surface structure...
-      Created Cu(100) with 36 atoms
-[2/5] Loading MACE model...
-[3/5] Relaxing surface...
-      Energy: -126.4521 → -126.8934 eV (Δ = -0.4413 eV)
-[4/5] Generating visualization...
-[5/5] Analyzing and generating report...
-      Comparing with: Lindgren et al., Phys. Rev. B 29, 576 (1984)
-      Agreement: GOOD
-
-# Surface Relaxation Analysis: Cu(100)
-...
+```bash
+microstack web --port 8000
 ```
 
-## How It Works
+Access the UI at `http://localhost:8000` to submit queries via a modern web interface with real-time progress tracking.
 
-### The Analysis Pipeline
+![µ-Stack Web Interface](assets/microstack-web.png)
 
-When you run `microstack simulate "Cu 100"`, the following steps occur:
+**Web Interface Features:**
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        ANALYSIS PIPELINE                         │
-└─────────────────────────────────────────────────────────────────┘
+- Modern responsive design with real-time updates
+- Query submission and progress monitoring
+- Gallery view of generated images and results
+- Session management and result history
+- Direct access to simulation data and reports
 
-Step 1: SURFACE GENERATION
-├── Input: Element (Cu) + Face (100)
-├── Process: ASE builds FCC lattice with experimental lattice constant
-├── Output: 3×3×4 supercell (36 atoms) with 10Å vacuum
-└── File: Cu_100_unrelaxed.xyz
+### CLI Commands
 
-                              ↓
+| Command                   | Description                            |
+| ------------------------- | -------------------------------------- |
+| `microstack`              | Enter interactive mode                 |
+| `microstack interactive`  | Explicitly start interactive chat      |
+| `microstack web`          | Start FastAPI web server               |
+| `microstack check-config` | Validate API keys and GPU availability |
+| `microstack --help`       | Show all available commands            |
 
-Step 2: MODEL LOADING
-├── Load MACE-MP-0 medium model
-├── Pre-trained on ~150k Materials Project DFT calculations
-└── Predicts energies and forces for any element combination
+### Example Workflows
 
-                              ↓
+**Single Microscopy Technique:**
 
-Step 3: SURFACE RELAXATION
-├── Algorithm: FIRE (Fast Inertial Relaxation Engine)
-├── Process: Iteratively move atoms to minimize energy
-├── Steps: 200 optimization steps
-├── Physics: Surface atoms relax inward (Smoluchowski smoothing)
-└── File: Cu_100_relaxed.xyz
-
-                              ↓
-
-Step 4: VISUALIZATION
-├── Top panel: Side view colored by z-displacement
-│   └── Blue = contracted, Red = expanded
-├── Bottom panel: Interlayer spacing changes (%)
-└── File: Cu_100_relaxation.png
-
-                              ↓
-
-Step 5: ANALYSIS & COMPARISON
-├── Extract metrics:
-│   ├── d₁₂ change (top layer spacing)
-│   ├── d₂₃ change (second layer spacing)
-│   └── Atomic displacements
-├── Query reference data:
-│   ├── Materials Project (bulk properties)
-│   └── Literature LEED data (surface relaxations)
-└── Compute agreement score
-
-                              ↓
-
-Step 6: AI REPORT GENERATION
-├── Send structured data to Claude API
-├── Claude writes scientific discussion:
-│   ├── Physical interpretation (why does it relax?)
-│   ├── Comparison analysis (how accurate is MACE?)
-│   └── Implications (catalysis, microscopy applications)
-└── File: Cu_100_report.md
+```bash
+microstack interactive
+# Type: relax Cu 100 and run STM
 ```
 
-### What Each Module Does
+**Multi-Technique Chain:**
 
-| Module                  | Purpose                                                   |
-| ----------------------- | --------------------------------------------------------- |
-| `generate_surfaces.py`  | Creates atomic structures using ASE's surface builders    |
-| `surface_relaxation.py` | Loads MACE model and runs FIRE optimization via TorchSim  |
-| `materials_project.py`  | Queries MP API + stores curated LEED reference data       |
-| `comparison.py`         | Extracts relaxation metrics and computes agreement scores |
-| `report_generator.py`   | Assembles markdown report and calls Claude for discussion |
-| `cli/app.py`            | Click CLI application with available commands             |
-| `cli/interactive.py`    | Interactive chat mode for conversational usage            |
-| `config.py`             | API keys and environment variable configuration           |
-| `settings.py`           | Pydantic-based settings management                        |
-
-### The Science Behind Surface Relaxation
-
-**Why do surfaces relax?**
-
-Surface atoms have fewer neighbors than bulk atoms. This creates an imbalance:
-
-```
-Bulk atom:     12 nearest neighbors (FCC)
-Surface atom:  8-9 nearest neighbors (missing atoms above)
+```bash
+# Relax structure, then run STM followed by IETS (all in one workflow)
+microstack> relax Pt 111 and scan with STM then IETS
 ```
 
-The reduced coordination causes:
+**Custom Parameters:**
 
-1. **Smoluchowski smoothing**: Electron density redistributes, pulling surface atoms inward
-2. **d₁₂ contraction**: Top layer moves toward second layer (typically -1% to -3%)
-3. **d₂₃ expansion**: Second layer compensates with slight outward movement
-4. **Oscillatory damping**: Effect decays into the bulk
+```bash
+# Natural language parameter control
+microstack> relax Au 111 with 300 relaxation steps and simulate with STM at 5 angstrom height
+```
 
-**Reference Data Sources**
+**Session Reuse:**
 
-| Method                                 | What it measures                         |
-| -------------------------------------- | ---------------------------------------- |
-| LEED (Low-Energy Electron Diffraction) | Atomic positions via electron scattering |
-| DFT (Density Functional Theory)        | Quantum mechanical energy minimization   |
-| MACE (This project)                    | ML potential trained on DFT data         |
+```bash
+# Generate structure once, analyze with multiple techniques
+microstack> generate Cu 100 surface
+microstack> run STM on current structure
+microstack> run AFM on current structure
+```
 
-## Available Reference Data
+## Architecture
 
-| Element | Surfaces      | Reference                                   |
-| ------- | ------------- | ------------------------------------------- |
-| Cu      | 100, 111, 110 | Lindgren (1984), Davis (1983), Adams (1987) |
-| Pt      | 100, 111      | Heilmann (1979), Materer (1995)             |
-| Au      | 100, 111      | Gibbs (1991), Harten (1985)                 |
-| Ag      | 100, 111      | Quinn (1988), Soares (1999)                 |
-| Ni      | 100, 111      | Demuth (1975), Narasimhan (1992)            |
-| Pd      | 100, 111      | Behm (1983), Ohtani (1987)                  |
-| C       | graphene      | Castro Neto (2009)                          |
-| MoS2    | 2d            | Splendiani (2010)                           |
+### Multi-Agent Workflow Engine
 
-## Output Files
+µStack uses a state-machine-based workflow orchestrated by **LangGraph**, enabling sophisticated multi-step simulations:
 
-All output files are saved to the `output/` directory with task-specific subdirectories.
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                    µ-STACK WORKFLOW PIPELINE                         │
+└──────────────────────────────────────────────────────────────────────┘
 
-| File                              | Contents                                         |
-| --------------------------------- | ------------------------------------------------ |
-| `{element}_{face}_unrelaxed.xyz`  | Initial atomic structure (XYZ format)            |
-| `{element}_{face}_relaxed.xyz`    | Relaxed atomic structure (if relaxation enabled) |
-| `{element}_{face}_relaxation.png` | Visualization of relaxation metrics              |
-| `{element}_{face}_report.md`      | Full scientific report with AI discussion        |
+User Query
+    ↓
+[1] QUERY PARSING (LLM)
+├── Input: "relax Pt 111 and run STM then IETS"
+├── LLM Agent: Parse with Claude/DeepSeek/Gemini
+└── Output: task_type, material, face, microscopy_queue=[STM, IETS]
+
+    ↓
+[2] STRUCTURE GENERATION
+├── Backend Selection:
+│   ├── SciLink (LLM-powered structure generation)
+│   └── Materials Project Database (DFT reference + ASE builder)
+├── Session Awareness: Reuse existing structure if already generated
+└── Output: atoms_object (ASE Atoms) + structure metadata
+
+    ↓
+[3] STRUCTURE RELAXATION (Optional)
+├── Potential: MACE-MP universal ML potential (~150k DFT data)
+├── Optimizer: FIRE (Fast Inertial Relaxation Engine)
+├── GPU Support: CUDA-accelerated force calculations
+└── Output: relaxed_structure + energy_change + displacement metrics
+
+    ↓
+[4] MICROSCOPY ROUTING
+├── Queue Processing: Execute microscopy techniques in order
+├── Session Persistence: Reuse relaxed structure for all techniques
+└── Parallel Capability: Independent simulations chain seamlessly
+
+    ↓
+[5] TECHNIQUE-SPECIFIC SIMULATION
+│
+├── STM (Scanning Tunneling Microscopy)
+│   ├── Engine: GPAW DFT calculator
+│   ├── Output: LDOS (Local Density of States) maps
+│   ├── Visualization: Energy-resolved topography images
+│   └── File: stm_topography_<height>.png + stm_ldos.npy
+│
+├── IETS (Inelastic Electron Tunneling Spectroscopy)
+│   ├── Engine: pyPPSTM (PPSTM fork)
+│   ├── Output: Spectroscopic d²I/dV² curves
+│   ├── Visualization: Energy-dependent conductance maps
+│   └── File: iets_spectrum.png + iets_data.npy
+│
+├── TEM (Transmission Electron Microscopy)
+│   ├── Engine: abTEM multislice wave-function propagation
+│   ├── Output: Phase shift and intensity maps
+│   ├── Visualization: Diffraction patterns + BF/DF images
+│   └── File: tem_bright_field.png + tem_diffraction.png
+│
+└── AFM (Atomic Force Microscopy)
+    ├── Engine: ppafm with OpenCL GPU acceleration
+    ├── Output: Tip-sample force maps (conservative + dissipative)
+    ├── Visualization: Height maps and 3D surface topography
+    └── File: afm_height.png + afm_forces.npy
+
+    ↓
+[6] AI-ASSISTED ANALYSIS
+├── Physics Interpretation: Claude analyzes results
+├── Literature Comparison: Cross-reference with experimental data
+├── Report Generation: Markdown with embedded images and data
+└── File: simulation_report.md + results_summary.txt
+
+    ↓
+[7] DATA EXPORT
+├── NSID Format: Standard scientific data structure
+├── Output Directory: Session-organized hierarchical structure
+└── Files: All images, raw data (NPY), metadata (JSON), reports (MD)
+```
+
+![µStack Workflow Architecture](assets/microstack-workflow.jpg)
+
+### Module Reference
+
+#### Core Workflow
+
+| Module                          | Purpose                                                     |
+| ------------------------------- | ----------------------------------------------------------- |
+| `agents/workflow.py`            | LangGraph state machine orchestrating multi-agent pipeline  |
+| `agents/state.py`               | `WorkflowState` Pydantic model tracking execution lifecycle |
+| `agents/session_manager.py`     | Global session tracking and state persistence               |
+| `agents/structure_generator.py` | Multi-backend structure generation with session reuse       |
+| `agents/microscopy_router.py`   | Queue-based routing for sequential microscopy execution     |
+
+#### Microscopy Agents
+
+| Module                      | Purpose                                            |
+| --------------------------- | -------------------------------------------------- |
+| `agents/microscopy/stm.py`  | STM simulations with GPAW DFT + LDOS calculations  |
+| `agents/microscopy/iets.py` | IETS spectroscopy via pyPPSTM integration          |
+| `agents/microscopy/tem.py`  | TEM simulations using abTEM multislice propagation |
+| `agents/microscopy/afm.py`  | AFM tip-sample interactions with ppafm OpenCL      |
+
+#### LLM Integration
+
+| Module             | Purpose                                                    |
+| ------------------ | ---------------------------------------------------------- |
+| `llm/client.py`    | Unified LLM factory supporting Anthropic, DeepSeek, Gemini |
+| `llm/models.py`    | Pydantic schemas for query parsing and response validation |
+| `llm/prompts.py`   | Structured prompts for LLM agents                          |
+| `llm/anthropic.py` | Anthropic Claude integration                               |
+| `llm/deepseek.py`  | DeepSeek API client                                        |
+
+#### Structure Relaxation
+
+| Module                                 | Purpose                                             |
+| -------------------------------------- | --------------------------------------------------- |
+| `relaxation/generate_surfaces.py`      | ASE-based surface structure generation              |
+| `relaxation/surface_relaxation.py`     | MACE potential + FIRE optimizer                     |
+| `relaxation/materials_project.py`      | Materials Project API queries + LEED reference data |
+| `relaxation/relax_report_generator.py` | Relaxation analysis and AI report generation        |
+| `relaxation/scilink_integration.py`    | SciLink structure generation backend                |
+
+#### CLI & Web Interfaces
+
+| Module               | Purpose                                    |
+| -------------------- | ------------------------------------------ |
+| `cli/app.py`         | Click CLI with main commands               |
+| `cli/interactive.py` | Interactive chat mode with rich formatting |
+| `web/api.py`         | FastAPI REST API with WebSocket support    |
+
+#### Utilities
+
+| Module                   | Purpose                                         |
+| ------------------------ | ----------------------------------------------- |
+| `utils/config.py`        | API keys, paths, and environment management     |
+| `utils/settings.py`      | Pydantic settings for all microscopy parameters |
+| `utils/gpu_detection.py` | GPU capability detection and CUDA validation    |
+| `utils/logging.py`       | Rich-based logging with color output            |
+| `io/nsid.py`             | NSID scientific data export format              |
+
+## Microscopy Techniques Explained
+
+### Scanning Tunneling Microscopy (STM)
+
+STM provides sub-angstrom resolution imaging by measuring tunneling current between a sharp tip and sample. µStack uses **GPAW** (DFT calculator) to compute local density of states (LDOS).
+
+**Key Parameters:**
+
+- Tip height (z): 2-10 Å above surface
+- Bias voltage (V): -2 to +2 V for spectroscopy
+- Temperature: Affects thermal smearing of LDOS
+
+**Outputs:**
+
+- Constant-height topography images
+- Energy-resolved LDOS maps
+- Scanning tunneling spectroscopy (STS) curves
+
+---
+
+### Inelastic Electron Tunneling Spectroscopy (IETS)
+
+IETS detects inelastic scattering of tunneling electrons, revealing vibrational modes and electronic excitations. µStack integrates **pyPPSTM** (modified PPSTM).
+
+**Key Parameters:**
+
+- Modulation frequency: Lock-in detection of conductance changes
+- Energy resolution: ~1-10 meV
+- Spatial resolution: ~0.1-0.5 nm (poorer than STM)
+
+**Outputs:**
+
+- d²I/dV² spectroscopic maps
+- Vibrational mode identification
+- Electronic excitation energies
+
+---
+
+### Transmission Electron Microscopy (TEM)
+
+TEM transmits electrons through thin structures, providing atomic-resolution crystallographic information. µStack uses **abTEM** multislice simulations.
+
+**Key Parameters:**
+
+- Accelerating voltage: Typically 100-300 keV
+- Slice thickness: ~1-2 Å for convergent-beam analysis
+- Scattering angle: Low-angle (bright field) to high-angle (dark field)
+
+**Outputs:**
+
+- Phase shift maps
+- Bright-field/dark-field images
+- Convergent-beam electron diffraction (CBED) patterns
+- Effective specimen thickness variations
+
+---
+
+### Atomic Force Microscopy (AFM)
+
+AFM measures tip-sample forces by monitoring cantilever deflection, enabling force mapping and nanomechanical characterization. µStack integrates **ppafm** with OpenCL GPU acceleration.
+
+**Key Parameters:**
+
+- Probe particle: Effective probe radius (typically 1-5 Å)
+- Scan height: 2-5 Å above surface
+- Force components: Conservative (elastic) + dissipative (energy loss)
+
+**Outputs:**
+
+- 3D height maps
+- Conservative force maps
+- Dissipative force maps (energy landscapes)
+- 3D surface topography
+
+---
+
+## Output Directory Structure
+
+All results are organized hierarchically by session:
+
+```
+output/
+├── session_<id>/                    # Session directory
+│   ├── structure/
+│   │   ├── structure_unrelaxed.xyz
+│   │   ├── structure_relaxed.xyz
+│   │   └── structure_info.json
+│   │
+│   ├── stm/                         # STM results (if requested)
+│   │   ├── stm_topography.png
+│   │   ├── stm_ldos_map.npy
+│   │   └── stm_config.json
+│   │
+│   ├── iets/                        # IETS results (if requested)
+│   │   ├── iets_spectrum.png
+│   │   ├── iets_data.npy
+│   │   └── iets_config.json
+│   │
+│   ├── tem/                         # TEM results (if requested)
+│   │   ├── tem_bright_field.png
+│   │   ├── tem_diffraction.png
+│   │   ├── tem_phase_shift.npy
+│   │   └── tem_config.json
+│   │
+│   ├── afm/                         # AFM results (if requested)
+│   │   ├── afm_height.png
+│   │   ├── afm_conservative_force.npy
+│   │   ├── afm_dissipative_force.npy
+│   │   └── afm_config.json
+│   │
+│   ├── analysis/
+│   │   ├── workflow_report.md
+│   │   ├── relaxation_metrics.json
+│   │   └── comparison_data.json
+│   │
+│   └── nsid/                        # NSID format export
+│       └── data.h5                  # HDF5 with standardized scientific metadata
+```
 
 ## Project Structure
 
 ```
-mic-hack2/
-├── pyproject.toml                    # Project configuration and dependencies
-├── .env.example                      # Environment variables template
-├── README.md                         # This file
+microstack/
+├── pyproject.toml                    # PyPI packaging configuration
+├── README.md                         # This documentation
 ├── LICENSE                           # MIT License
-├── .gitignore                        # Git exclusions
-├── PPSTM/                            # PPSTM submodule for IETS simulations
+├── assets/                           # Images for documentation
+│   ├── microstack-logo.png
+│   ├── microstack-workflow.jpg
+│   └── microstack-terminal.png
 │
-└── src/microstack/             # Main package
-    ├── __init__.py                   # Package marker
+└── src/microstack/                   # Main package
+    ├── __init__.py
     │
-    ├── cli/                          # CLI subpackage
-    │   ├── app.py                    # Click CLI entry point
-    │   └── interactive.py            # Interactive chat mode
+    ├── cli/                          # Command-line interface
+    │   ├── app.py                    # Main CLI entry point
+    │   └── interactive.py            # Interactive mode
     │
-    ├── agents/                       # Multi-agent workflow orchestration
-    │   ├── workflow.py               # LangGraph state machine
-    │   ├── state.py                  # WorkflowState Pydantic model
-    │   ├── structure_generator.py    # Structure generation agent
-    │   ├── microscopy_router.py      # Microscopy routing logic
-    │   └── microscopy/               # Microscopy simulation agents
-    │       ├── stm.py                # STM simulation (GPAW-based)
-    │       ├── afm.py                # AFM simulation (ppafm-based)
-    │       └── iets.py               # IETS simulation (PPSTM-based)
+    ├── agents/                       # LangGraph agents
+    │   ├── workflow.py               # State machine orchestration
+    │   ├── state.py                  # WorkflowState schema
+    │   ├── session_manager.py        # Session lifecycle management
+    │   ├── structure_generator.py    # Structure generation
+    │   ├── microscopy_router.py      # Microscopy execution router
+    │   └── microscopy/               # Technique-specific agents
+    │       ├── stm.py
+    │       ├── iets.py
+    │       ├── tem.py
+    │       └── afm.py
     │
-    ├── llm/                          # LLM integration subpackage
-    │   ├── client.py                 # Unified LLM client factory
-    │   ├── anthropic.py              # Anthropic Claude client
-    │   ├── deepseek.py               # DeepSeek API client
-    │   ├── models.py                 # Pydantic query parsing models
-    │   └── prompts.py                # LLM prompt templates
+    ├── llm/                          # Language model integration
+    │   ├── client.py                 # LLM factory
+    │   ├── anthropic.py
+    │   ├── deepseek.py
+    │   ├── models.py                 # Pydantic schemas
+    │   └── prompts.py
     │
-    ├── relaxation/                   # Structure relaxation pipeline
-    │   ├── generate_surfaces.py      # Surface generation (ASE)
-    │   ├── surface_relaxation.py     # ML relaxation (MACE + FIRE)
-    │   ├── materials_project.py      # Reference data + MP API
-    │   ├── comparison.py             # Analysis engine
-    │   ├── relax_report_generator.py # Report + Claude integration
-    │   └── scilink_integration.py    # SciLink structure generation
+    ├── relaxation/                   # ML structure relaxation
+    │   ├── generate_surfaces.py
+    │   ├── surface_relaxation.py
+    │   ├── materials_project.py
+    │   ├── relax_report_generator.py
+    │   └── scilink_integration.py
     │
-    ├── utils/                        # Utilities subpackage
-    │   ├── config.py                 # API keys and configuration
-    │   ├── settings.py               # Pydantic settings management
-    │   ├── exceptions.py             # Custom exception classes
-    │   ├── gpu_detection.py          # CUDA/GPU utilities
-    │   └── logging.py                # Rich-based logging setup
+    ├── web/                          # FastAPI web interface
+    │   ├── api.py                    # REST API + WebSocket
+    │   └── __init__.py
     │
-    └── output/                       # Runtime output directory (generated)
+    ├── io/                           # Data I/O
+    │   ├── nsid.py                   # NSID format support
+    │   └── __init__.py
+    │
+    ├── utils/                        # Utilities
+    │   ├── config.py                 # Configuration management
+    │   ├── settings.py               # Pydantic settings
+    │   ├── gpu_detection.py
+    │   ├── logging.py
+    │   ├── report_generator.py
+    │   └── exceptions.py
+    │
+    └── output/                       # Generated results (at runtime)
 ```
+
+## Key Dependencies
+
+µStack integrates multiple mature scientific computing libraries:
+
+### Simulation Engines
+
+- **GPAW** (DFT calculator): STM and relaxation simulations via density functional theory
+- **pyPPSTM**: Inelastic electron tunneling spectroscopy calculations
+- **abTEM**: Transmission electron microscopy multislice wave-function propagation
+- **ppafm**: Atomic force microscopy tip-sample interaction modeling with OpenCL
+
+### Machine Learning Potentials
+
+- **MACE-MP**: Universal ML potential trained on ~150k Materials Project DFT calculations
+- **torch**: PyTorch backend for MACE force calculations and GPU acceleration
+
+### Structure & Materials
+
+- **ASE** (Atomic Simulation Environment): Structure generation and manipulation
+- **SciLink**: AI-powered structure generation via Claude API
+- **Materials Project API**: Access to 150k+ computed material properties
+
+### Workflow & API
+
+- **LangGraph**: Multi-agent state machine orchestration
+- **FastAPI**: Modern REST API with async support
+- **Uvicorn**: ASGI web server with WebSocket support
+- **Click**: Command-line interface framework
+- **Rich**: Terminal UI with markdown rendering
+
+### Data & Analysis
+
+- **NumPy/Matplotlib**: Numerical computing and visualization
+- **Pydantic**: Data validation and settings management
+- **pyNSID/sidpy**: Scientific data standardization (NSID format)
+- **h5py**: HDF5 file handling
+
+### LLM Providers
+
+- **Anthropic**: Claude API for query parsing and report generation
+- **DeepSeek**: Alternative LLM provider
+- **Google Generative AI**: Gemini model support
+
+## Performance Benchmarks
+
+Typical execution times (on NVIDIA V100 GPU):
+
+| Operation                   | Time      | Notes                      |
+| --------------------------- | --------- | -------------------------- |
+| Structure generation        | ~2-5 s    | ASE + Materials Project    |
+| MACE relaxation (100 steps) | ~30-60 s  | GPU-accelerated            |
+| STM simulation              | ~2-10 min | Depends on grid resolution |
+| IETS calculation            | ~3-15 min | Energy range dependent     |
+| TEM simulation              | ~1-5 min  | Slice count dependent      |
+| AFM force mapping           | ~5-20 min | Grid resolution dependent  |
+| AI report generation        | ~30-60 s  | Claude API round-trip      |
+
+**CPU-only** systems should expect 5-10x slowdown for DFT-based simulations. GPU acceleration is recommended for practical use.
+
+## Contributing
+
+µStack welcomes contributions! Areas for improvement:
+
+- **New microscopy techniques**: Add support for XRD, HREELS, LEED, etc.
+- **Additional ML potentials**: Integrate other universal potentials (MACE variants, CHGNet, etc.)
+- **Performance optimization**: CUDA kernels for common bottlenecks
+- **Documentation**: Tutorials, physics background, troubleshooting
+- **Testing**: Comprehensive unit and integration tests
+- **UI improvements**: Enhanced web interface and visualization
+
+## Citing µStack
+
+If you use µStack in published research, please cite:
+
+```bibtex
+@software{microstack2025,
+  title={µStack: Multi-Agent Atomistic Microscopy Simulation Platform},
+  author={Team µStack},
+  year={2025},
+  url={https://github.com/blaiszik/microstack},
+  version={0.1.0}
+}
+```
+
+## Authors & Contributors
+
+**µ-Stack Core Team:**
+
+- Aritra Dasgupta (@aritra_d) - Project Lead, Workflow Architecture
+- Blaiszik et al. - Active Development & Maintenance
+
+**Contributions Welcome!** See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Acknowledgments
+
+µStack builds on the work of multiple open-source projects:
+
+- ASE team (structure generation)
+- GPAW developers (DFT calculations)
+- pyPPSTM maintainers (IETS simulations)
+- abTEM community (TEM simulations)
+- ppafm team (AFM simulations)
+- Materials Project team (reference data)
+- LangGraph team (workflow orchestration)
 
 ## License
 
-MIT License
+MIT License - see LICENSE file for details
+
+Copyright (c) 2025 Team µStack
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+---
+
+<div align="center">
+
+**Made with ❤️ by the µStack Team**
+
+Built for the materials science and microscopy research community during the 2025 Microscopy Hackathon.
+
+For questions, feedback, or collaborations: [GitHub Issues](https://github.com/blaiszik/microstack/issues)
+
+</div>

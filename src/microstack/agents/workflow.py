@@ -1,4 +1,4 @@
-"""Main LangGraph workflow for µ-Stack multi-agent system."""
+"""Main LangGraph workflow for µStack multi-agent system."""
 
 from langgraph.graph import StateGraph, END
 from typing import Literal
@@ -118,7 +118,7 @@ def create_workflow() -> StateGraph:
     Returns:
         Compiled StateGraph ready for execution
     """
-    logger.info("Creating µ-Stack LangGraph workflow")
+    logger.info("Creating µStack LangGraph workflow")
 
     # Create StateGraph
     workflow = StateGraph(WorkflowState)

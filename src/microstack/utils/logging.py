@@ -1,4 +1,4 @@
-"""Logging configuration for µ-Stack."""
+"""Logging configuration for µStack."""
 
 import logging
 import sys

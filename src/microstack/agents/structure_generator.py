@@ -1,4 +1,4 @@
-"""Structure generation agent for µ-Stack workflow."""
+"""Structure generation agent for µStack workflow."""
 
 import sys
 from pathlib import Path
@@ -8,7 +8,10 @@ from ase.io import write, read
 from ase import Atoms
 
 from microstack.agents.state import WorkflowState
-from microstack.agents.structure_validator import validate_structure, fix_structure_vacuum
+from microstack.agents.structure_validator import (
+    validate_structure,
+    fix_structure_vacuum,
+)
 from microstack.relaxation.generate_surfaces import create_surface
 from microstack.relaxation.surface_relaxation import (
     load_model,
@@ -71,7 +74,9 @@ def generate_structure(state: WorkflowState) -> WorkflowState:
         # Check if structure already exists in session and no new structure requested
         if state.atoms_object is not None and not parsed_params.material_formula:
             logger.info("Reusing existing structure from current session")
-            state.add_warning("Using existing structure from session (no new structure specified in query)")
+            state.add_warning(
+                "Using existing structure from session (no new structure specified in query)"
+            )
             return state
 
         # If no structure specified AND no atoms in state, raise error
@@ -102,7 +107,9 @@ def generate_structure(state: WorkflowState) -> WorkflowState:
                 atoms = _generate_with_materials_project(state)
             # If Materials Project fails, fall back to simple surface generation
             if atoms is None:
-                logger.info("Materials Project failed, falling back to simple surface generation")
+                logger.info(
+                    "Materials Project failed, falling back to simple surface generation"
+                )
                 atoms = _generate_simple_surface(state)
         else:
             logger.info("Using simple surface generation")
@@ -290,7 +297,9 @@ def _generate_with_materials_project(state: WorkflowState) -> Optional[Atoms]:
         structure_source = parsed_params.structure_source
 
         if not (material_formula or material_id):
-            logger.error("No material formula or ID provided for Materials Project lookup")
+            logger.error(
+                "No material formula or ID provided for Materials Project lookup"
+            )
             return None
 
         # Initialize Materials Project API
@@ -323,7 +332,9 @@ def _generate_with_materials_project(state: WorkflowState) -> Optional[Atoms]:
 
                 # Use the most stable structure (lowest energy per atom)
                 structure = results[0]["structure"]
-                logger.info(f"Using most stable structure: {results[0]['pretty_formula']}")
+                logger.info(
+                    f"Using most stable structure: {results[0]['pretty_formula']}"
+                )
 
             # Convert PyMatGen structure to ASE Atoms
             atoms = AseAtomsAdaptor.get_atoms(structure)
@@ -344,11 +355,7 @@ def _generate_with_materials_project(state: WorkflowState) -> Optional[Atoms]:
             from ase.build import surface as build_surface
 
             layers = 4  # Default number of layers
-            vacuum = (
-                parsed_params.vacuum_thickness
-                or parsed_params.vacuum_size
-                or 15.0
-            )
+            vacuum = parsed_params.vacuum_thickness or parsed_params.vacuum_size or 15.0
 
             try:
                 # Get lattice constant from bulk structure
@@ -387,9 +394,7 @@ def _generate_with_materials_project(state: WorkflowState) -> Optional[Atoms]:
 
     except ImportError:
         logger.warning("PyMatGen or Materials Project tools not available")
-        state.add_warning(
-            "PyMatGen not available for Materials Project integration"
-        )
+        state.add_warning("PyMatGen not available for Materials Project integration")
         return None
     except Exception as e:
         logger.error(f"Materials Project generation failed: {e}", exc_info=True)
@@ -516,9 +521,13 @@ def relax_structure(state: WorkflowState) -> WorkflowState:
             return state
 
         # Check if relaxed structure already exists in session and no new structure was requested
-        if state.atoms_relaxed is not None and not (state.parsed_params and state.parsed_params.material_formula):
+        if state.atoms_relaxed is not None and not (
+            state.parsed_params and state.parsed_params.material_formula
+        ):
             logger.info("Reusing relaxed structure from current session")
-            state.add_warning("Using relaxed structure from session (no new structure specified)")
+            state.add_warning(
+                "Using relaxed structure from session (no new structure specified)"
+            )
             return state
 
         # Check if relaxation was requested

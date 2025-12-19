@@ -1,4 +1,4 @@
-"""Utility modules for µ-Stack.
+"""Utility modules for µStack.
 
 Provides logging, GPU detection, exception handling, and other utility functions.
 """

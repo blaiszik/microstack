@@ -1,4 +1,4 @@
-"""LangGraph state definition for µ-Stack workflow."""
+"""LangGraph state definition for µStack workflow."""
 
 from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
@@ -10,7 +10,7 @@ from microstack.llm.models import ParsedQuery
 
 
 class WorkflowState(BaseModel):
-    """State object for the µ-Stack LangGraph workflow.
+    """State object for the µStack LangGraph workflow.
 
     Tracks all information through the workflow lifecycle from query parsing
     to structure generation to microscopy simulations.
@@ -62,10 +62,12 @@ class WorkflowState(BaseModel):
         default=False, description="Whether microscopy simulation was requested"
     )
     microscopy_type: Optional[Union[str, List[str]]] = Field(
-        default=None, description="Type(s) of microscopy to run (STM, AFM, IETS, or list for sequential execution)"
+        default=None,
+        description="Type(s) of microscopy to run (STM, AFM, IETS, or list for sequential execution)",
     )
     microscopy_queue: List[str] = Field(
-        default_factory=list, description="Queue of remaining microscopy simulations to execute (in order)"
+        default_factory=list,
+        description="Queue of remaining microscopy simulations to execute (in order)",
     )
     current_microscopy: Optional[str] = Field(
         default=None, description="Currently executing microscopy type"

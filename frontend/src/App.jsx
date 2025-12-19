@@ -66,7 +66,7 @@ function App() {
     setLoading(true);
     setResults(null);
     setError(null);
-    setLogs("µ-Stack engine started...");
+    setLogs("µStack engine started...");
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/query`, {
@@ -101,7 +101,7 @@ function App() {
   return (
     <div className="app-container">
       <header>
-        <img src={logo} alt="µ-Stack Logo" />
+        <img src={logo} alt="µStack Logo" />
         <p>AI Materials Scientist · Zoom In To Atomic Scale</p>
       </header>
 

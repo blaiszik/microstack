@@ -1,5 +1,5 @@
 /*
- * µ-Stack Design System
+ * µStack Design System
  * Inspired by Apple's design philosophy: Simplicity. Clarity. Depth.
  */
 
@@ -65,7 +65,9 @@
 }
 
 /* Base reset */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;

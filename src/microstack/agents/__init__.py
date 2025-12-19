@@ -1,1 +1,1 @@
-"""µ-Stack agents package for LangGraph workflows."""
+"""µStack agents package for LangGraph workflows."""

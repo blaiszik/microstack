@@ -1,3 +1,3 @@
-"""µ-Stack CLI package."""
+"""µStack CLI package."""
 
 __all__ = []

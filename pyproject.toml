@@ -8,7 +8,11 @@ version = "0.1.0"
 description = "AI Materials Scientist - Analyze atomic surfaces using Machine Learning Potentials"
 readme = "README.md"
 authors = [
-  { name = "Team MicroStack" },
+  { name = "Team µStack" },
+  { name = "Aritra Roy", email = "contact@aritraroy.live" },
+  { name = "Kevin Shen", email = "kevin.shen@noble.ai" },
+  { name = "Ben Blaiszik", email = "blaiszik@uchicago.edu" },
+  { name = "Piyush Ranjan Maharana", email = "piyushmaharana15@gmail.com" },
 ]
 requires-python = ">=3.12"
 classifiers = [
