@@ -1,12 +1,10 @@
+<p align="center">
+    <img src="https://raw.githubusercontent.com/blaiszik/microstack/refs/heads/main/assets/microstack-logo.png" alt="µStack Logo" width="300"/>
+</p>
+
+[![Python Version](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg?logo=python&logoColor=white)](https://www.python.org/downloads/) [![License: MIT](https://custom-icon-badges.demolab.com/badge/license-MIT-yellow.svg?logo=law&logoColor=white)](https://opensource.org/licenses/MIT) [![PyPI](https://img.shields.io/pypi/v/microstack?logo=pypi&logoColor=white)](https://pypi.org/project/microstack/) [![PyPI - Downloads](https://custom-icon-badges.demolab.com/pypi/dm/microstack?logo=download&logoColor=white&color=purple)](https://pypistats.org/packages/microstack) [![Ask DeepWiki](https://custom-icon-badges.demolab.com/badge/Ask%20DeepWiki-brightgreen.svg?logo=deepwikidevin&logoColor=white&labelColor=grey&color=5ab998)](https://deepwiki.com/blaiszik/microstack)
+
 # µStack: Multi-Agent Atomistic Microscopy Simulation Platform
-
-![Python](https://img.shields.io/badge/Python-3.12%2B-blue)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PyPI version](https://img.shields.io/badge/PyPI-microstack-0.1.0-blueviolet)](https://pypi.org/project/microstack)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-![Status](https://img.shields.io/badge/status-Alpha-orange)
-
-![µStack Logo](assets/microstack-logo.png)
 
 An advanced AI-powered platform for atomistic microscopy simulations, combining multi-agent workflows, machine learning potentials, and LLM-assisted analysis to simulate surface structures across multiple experimental techniques.
 
@@ -618,26 +616,26 @@ If you use µStack in published research, please cite:
 }
 ```
 
-## Authors & Contributors
+## Authors
 
-**µ-Stack Core Team:**
+**µStack Core Team:**
 
-- Aritra Dasgupta (@aritra_d) - Project Lead, Workflow Architecture
-- Blaiszik et al. - Active Development & Maintenance
-
-**Contributions Welcome!** See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+- Aritra Roy ([contact@aritraroy.live](mailto:contact@aritraroy.live))
+- Kevin Shen ([kevin.shen@noble.ai](mailto:kevin.shen@noble.ai))
+- Ben Blaiszik ([blaiszik@uchicago.edu](mailto:blaiszik@uchicago.edu))
+- Piyush Ranjan Maharana ([piyushmaharana15@gmail.com](mailto:piyushmaharana15@gmail.com))
 
 ## Acknowledgments
 
 µStack builds on the work of multiple open-source projects:
 
-- ASE team (structure generation)
-- GPAW developers (DFT calculations)
-- pyPPSTM maintainers (IETS simulations)
-- abTEM community (TEM simulations)
-- ppafm team (AFM simulations)
-- Materials Project team (reference data)
-- LangGraph team (workflow orchestration)
+- [Atomic Simulation Environment (ASE)](https://ase-lib.org/)
+- [GPAW](https://gpaw.readthedocs.io/)
+- [ppafm](https://github.com/Probe-Particle/ppafm)
+- [pyPPSTM](https://github.com/Probe-Particle/PPSTM)
+- [abTEM](https://abtem.readthedocs.io/)
+- [Materials Project](https://next-gen.materialsproject.org/)
+- [LangGraph](https://www.langchain.com/langgraph)
 
 ## License
 
