@@ -575,22 +575,6 @@ microstack/
 - **DeepSeek**: Alternative LLM provider
 - **Google Generative AI**: Gemini model support
 
-## Performance Benchmarks
-
-Typical execution times (on NVIDIA V100 GPU):
-
-| Operation                   | Time      | Notes                      |
-| --------------------------- | --------- | -------------------------- |
-| Structure generation        | ~2-5 s    | ASE + Materials Project    |
-| MACE relaxation (100 steps) | ~30-60 s  | GPU-accelerated            |
-| STM simulation              | ~2-10 min | Depends on grid resolution |
-| IETS calculation            | ~3-15 min | Energy range dependent     |
-| TEM simulation              | ~1-5 min  | Slice count dependent      |
-| AFM force mapping           | ~5-20 min | Grid resolution dependent  |
-| AI report generation        | ~30-60 s  | Claude API round-trip      |
-
-**CPU-only** systems should expect 5-10x slowdown for DFT-based simulations. GPU acceleration is recommended for practical use.
-
 ## Contributing
 
 µStack welcomes contributions! Areas for improvement:
