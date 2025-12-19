@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "microstack"
 version = "0.1.0"
-description = "AI Materials Scientist - Analyze atomic surfaces using Machine Learning Potentials"
+description = "AI Materials Scientist - Analyze atomic surfaces using MLIPs and various microscopy simulation techniques."
 readme = "README.md"
 authors = [
   { name = "Team µStack" },
