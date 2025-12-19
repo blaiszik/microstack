@@ -8,6 +8,14 @@
 
 An advanced AI-powered platform for atomistic microscopy simulations, combining multi-agent workflows, machine learning potentials, and LLM-assisted analysis to simulate surface structures across multiple experimental techniques.
 
+## Quick Demo
+
+Watch how µStack works in action:
+
+[![µStack Demo Video](https://img.youtube.com/vi/a85-im6ldyQ/maxresdefault.jpg)](https://youtu.be/a85-im6ldyQ)
+
+Click the image or [click here](https://youtu.be/a85-im6ldyQ) to watch the full demo on YouTube to see µStack simulating atomistic microscopy workflows.
+
 ## Key Features
 
 ### 🔬 Multi-Technique Microscopy Simulation

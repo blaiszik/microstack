@@ -58,9 +58,9 @@ dependencies = [
     "pydantic-settings",
     "tenacity",
     "python-dotenv",
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
-    "websockets>=14.0",
+    "fastapi",
+    "uvicorn[standard]",
+    "websockets",
 ]
 
 [project.scripts]
