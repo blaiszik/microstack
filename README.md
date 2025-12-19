@@ -123,7 +123,9 @@ microstack
 
 This launches an interactive chat interface where you can describe what you want to simulate in natural language.
 
-![µ-Stack Terminal Interface](assets/microstack-terminal.png)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/blaiszik/microstack/refs/heads/main/assets/microstack-terminal.png" alt="µ-Stack Terminal Interface" width="750"/>
+</div>
 
 **Terminal Features:**
 
@@ -156,7 +158,9 @@ microstack web --port 8000
 
 Access the UI at `http://localhost:8000` to submit queries via a modern web interface with real-time progress tracking.
 
-![µ-Stack Web Interface](assets/microstack-web.png)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/blaiszik/microstack/refs/heads/main/assets/microstack-web.png" alt="µ-Stack Web Interface" width="750"/>
+</div>
 
 **Web Interface Features:**
 
@@ -288,7 +292,9 @@ User Query
 └── Files: All images, raw data (NPY), metadata (JSON), reports (MD)
 ```
 
-![µStack Workflow Architecture](assets/microstack-workflow.jpg)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/blaiszik/microstack/refs/heads/main/assets/microstack-workflow.jpg" alt="µStack Workflow Architecture" width="750"/>
+</div>
 
 ### Module Reference
 
